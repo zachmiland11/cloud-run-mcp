@@ -1,6 +1,8 @@
 import express from 'express';
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+// Support SSE for backward compatibility
+import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 
 const getServer = () => {
   // Create an MCP server with implementation details
@@ -120,6 +122,34 @@ app.delete('/mcp', async (req, res) => {
     },
     id: null
   }));
+});
+
+// Support SSE for baackward compatibility
+const sseTransports = {};
+
+// Legacy SSE endpoint for older clients
+app.get('/sse', async (req, res) => {
+  const server = getServer();
+  // Create SSE transport for legacy clients
+  const transport = new SSEServerTransport('/messages', res);
+  sseTransports[transport.sessionId] = transport;
+  
+  res.on("close", () => {
+    delete sseTransports[transport.sessionId];
+  });
+  
+  await server.connect(transport);
+});
+
+// Legacy message endpoint for older clients
+app.post('/messages', async (req, res) => {
+  const sessionId = req.query.sessionId;
+  const transport = sseTransports[sessionId];
+  if (transport) {
+    await transport.handlePostMessage(req, res, req.body);
+  } else {
+    res.status(400).send('No transport found for sessionId');
+  }
 });
 
 // Start the server
