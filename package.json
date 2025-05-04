@@ -1,0 +1,30 @@
+{
+  "name": "cloud-run-mcp",
+  "version": "1.0.0",
+  "description": "local personal MCP server to deploy to Cloud Run",
+  "main": "index.js",
+  "scripts": {
+    "test": "npx @modelcontextprotocol/inspector node index.js",
+    "start": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/steren/cloud-run-mcp.git"
+  },
+  "keywords": [
+    "mcp",
+    "cloud-run",
+    "gcp"
+  ],
+  "author": "@steren",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/steren/cloud-run-mcp/issues"
+  },
+  "homepage": "https://github.com/steren/cloud-run-mcp#readme",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.11.0",
+    "express": "^5.1.0"
+  },
+  "type": "module"
+}
