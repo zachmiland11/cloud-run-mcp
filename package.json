@@ -4,6 +4,7 @@
   "description": "local personal MCP server to deploy to Cloud Run",
   "main": "index.js",
   "scripts": {
+    "deploy": "gcloud run deploy cloud-run-mcp --source . --no-invoker-iam-check",
     "test": "npx @modelcontextprotocol/inspector node index.js",
     "start": "node index.js"
   },
