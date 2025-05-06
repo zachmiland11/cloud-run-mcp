@@ -74,7 +74,7 @@ async function deployToCloudRun(projectId, location, serviceId, imgUrl) {
       });
     }
 
-    console.log(`Deploying ${serviceId} to Cloud Run... Waiting for operation ${operation.name} to complete.`);
+    console.log(`Deploying ${serviceId} to Cloud Run...`);
     const [response] = await operation.promise(); // Wait for completion
 
     console.log(`Service deployed/updated successfully: ${response.uri}`);
@@ -207,7 +207,7 @@ async function ensureArtifactRegistryRepoExists(projectId, location, repositoryI
           repository: repositoryToCreate,
           repositoryId: repositoryId,
         });
-        console.log(`Creating Artifact Registry repository ${repositoryId}. Waiting for operation ${operation.name} to complete...`);
+        console.log(`Creating Artifact Registry repository ${repositoryId}...`);
         const [result] = await operation.promise(); // Wait for completion
         console.log(`Artifact Registry repository ${result.name} created successfully.`);
         return result;
@@ -253,7 +253,7 @@ async function triggerCloudBuild(projectId, location, sourceBucketName, sourceBl
       build: build,
     });
 
-    console.log(`Cloud Build job started (Operation: ${operation.name}). Waiting for completion...`);
+    console.log(`Cloud Build job started...`);
     const buildId = operation.metadata.build.id;
     let completedBuild;
     while (true) {
