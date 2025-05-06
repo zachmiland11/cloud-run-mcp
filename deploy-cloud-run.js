@@ -24,11 +24,9 @@ import { v2 } from '@google-cloud/run';
 const { ServicesClient } = v2;
 
 // --- Configuration ---
-const repoName = 'containers'; // Your Artifact Registry repo name
-const sourcesFolderName = 'sources'; // Name of the folder containing source code
+const repoName = 'mcp-cloud-run-deployments'; // Automatically created Artifact Registry repo name
 const zipFileName = 'source.zip';
 const imageTag = 'latest';
-const imageName = `myapp`; // Name of the image to build
 
 // --- Initialize Clients ---
 let storage;
@@ -330,7 +328,7 @@ export async function deploy({ projectId, serviceName = 'app', region = 'europe-
 
   // Set derived configuration values
   const bucketName = `${projectId}-source-bucket`;
-  const imageUrl = `${region}-docker.pkg.dev/${projectId}/${repoName}/${imageName}:${imageTag}`;
+  const imageUrl = `${region}-docker.pkg.dev/${projectId}/${repoName}/${serviceName}:${imageTag}`;
 
   console.log(`--- Project: ${projectId} ---`);
   console.log(`--- Region: ${region} ---`);
