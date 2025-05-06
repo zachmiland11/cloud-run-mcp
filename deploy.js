@@ -1,0 +1,369 @@
+import path from 'path';
+import fs from 'fs';
+import archiver from 'archiver';
+import { Storage } from '@google-cloud/storage';
+import { CloudBuildClient } from '@google-cloud/cloudbuild';
+import { ArtifactRegistryClient } from '@google-cloud/artifact-registry';
+import { v2 } from '@google-cloud/run';
+const { ServicesClient } = v2;
+
+// --- Configuration ---
+const repoName = 'containers'; // Your Artifact Registry repo name
+const sourcesFolderName = 'sources'; // Name of the folder containing source code
+const zipFileName = 'source.zip';
+const imageTag = 'latest';
+const imageName = `myapp`; // Name of the image to build
+
+// --- Initialize Clients ---
+let storage;
+let cloudBuildClient;
+let artifactRegistryClient;
+let runClient;
+
+/**
+ * Checks if a Cloud Run service exists.
+ */
+async function checkCloudRunServiceExists(location, serviceId) {
+  const parent = runClient.locationPath(projectId, location);
+  const servicePath = runClient.servicePath(projectId, location, serviceId);
+  try {
+    await runClient.getService({ name: servicePath });
+    console.log(`Cloud Run service ${serviceId} already exists.`);
+    return true;
+  } catch (error) {
+    // Assuming 'NOT_FOUND' error code indicates non-existence
+    if (error.code === 5) { // 5 corresponds to NOT_FOUND in gRPC
+       console.log(`Cloud Run service ${serviceId} does not exist.`);
+       return false;
+    }
+    console.error(`Error checking Cloud Run service ${serviceId}:`, error);
+    throw error; // Re-throw other errors
+  }
+}
+
+/**
+ * Deploys or updates a container to Google Cloud Run.
+ */
+async function deployToCloudRun(location, serviceId, imgUrl) {
+  const parent = runClient.locationPath(projectId, location);
+  const servicePath = runClient.servicePath(projectId, location, serviceId);
+
+  const service = {
+    template: {
+      containers: [{ image: imgUrl }],
+    },
+  };
+
+  try {
+    const exists = await checkCloudRunServiceExists(location, serviceId);
+    let operation;
+    if (exists) {
+      console.log(`Updating existing service ${serviceId}...`);
+      service.name = servicePath; // Required for update
+      [operation] = await runClient.updateService({ service });
+    } else {
+      console.log(`Creating new service ${serviceId}...`);
+      [operation] = await runClient.createService({
+        parent: parent,
+        service: service,
+        serviceId: serviceId,
+      });
+    }
+
+    console.log(`Deploying ${serviceId} to Cloud Run... Waiting for operation ${operation.name} to complete.`);
+    const [response] = await operation.promise(); // Wait for completion
+
+    console.log(`Service deployed/updated successfully: ${response.uri}`);
+    return response;
+  } catch (error) {
+    console.error(`Error deploying/updating service ${serviceId}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Checks if a Google Cloud Storage bucket exists.
+ */
+async function checkStorageBucketExists(bucketNameToCheck) {
+  try {
+    const [exists] = await storage.bucket(bucketNameToCheck).exists();
+    if (exists) {
+      console.log(`Bucket ${bucketNameToCheck} already exists.`);
+    } else {
+      console.log(`Bucket ${bucketNameToCheck} does not exist.`);
+    }
+    return exists;
+  } catch (error) {
+    console.error(`Error checking bucket ${bucketNameToCheck}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Creates a Google Cloud Storage bucket.
+ */
+async function createStorageBucket(bucketNameToCreate, location = 'us') {
+  try {
+    console.log(`Attempting to create storage bucket ${bucketNameToCreate} in location ${location}...`);
+    const [bucket] = await storage.createBucket(bucketNameToCreate, {
+      location: location,
+    });
+    console.log(`Storage bucket ${bucket.name} created successfully in ${location}.`);
+    return bucket;
+  } catch (error) {
+    console.error(`Failed to create storage bucket ${bucketNameToCreate}. Error details:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Zips a list of files and directories into a memory buffer.
+ * @param {string[]} files - List of files and directories to zip
+ * @returns {Promise<Buffer>} - Returns a promise that resolves to the zip file buffer
+ */
+function zipFiles(files) {
+  return new Promise((resolve, reject) => {
+    console.log('Creating in-memory zip archive...');
+    const chunks = [];
+    const archive = archiver('zip', {
+      zlib: { level: 9 } // Sets the compression level.
+    });
+
+    archive.on('data', (chunk) => chunks.push(chunk));
+    archive.on('end', () => {
+      console.log(`Files zipped successfully. Total size: ${archive.pointer()} bytes`);
+      resolve(Buffer.concat(chunks));
+    });
+
+    archive.on('warning', (err) => {
+      if (err.code === 'ENOENT') {
+        console.warn('Archiver warning:', err);
+      } else {
+        reject(err);
+      }
+    });
+
+    archive.on('error', (err) => {
+      reject(err);
+    });
+
+    // Add each file or directory to the zip
+    files.forEach(file => {
+      const filePath = path.resolve(file);
+      if (!fs.existsSync(filePath)) {
+        throw new Error(`File or directory not found: ${filePath}`);
+      }
+      
+      const stats = fs.statSync(filePath);
+      if (stats.isDirectory()) {
+        archive.directory(filePath, path.basename(filePath));
+      } else {
+        archive.file(filePath, { name: path.basename(filePath) });
+      }
+    });
+
+    archive.finalize();
+  });
+}
+
+/**
+ * Uploads a buffer to a Google Cloud Storage bucket.
+ */
+async function uploadToStorageBucket(bucket, buffer, destinationBlobName) {
+  try {
+    console.log(`Uploading buffer to gs://${bucket.name}/${destinationBlobName}...`);
+    const [file] = await bucket.file(destinationBlobName).save(buffer);
+    console.log(`File ${file.name} uploaded successfully.`);
+    return file;
+  } catch (error) {
+    console.error(`Error uploading buffer:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Checks if an Artifact Registry repository exists.
+ */
+async function checkArtifactRegistryRepoExists(location, repositoryId) {
+  const parent = artifactRegistryClient.locationPath(projectId, location);
+  const repoPath = artifactRegistryClient.repositoryPath(projectId, location, repositoryId);
+  try {
+    await artifactRegistryClient.getRepository({ name: repoPath });
+    console.log(`Repository ${repositoryId} already exists in ${location}.`);
+    return true;
+  } catch (error) {
+     // Assuming 'NOT_FOUND' error code indicates non-existence
+    if (error.code === 5) { // 5 corresponds to NOT_FOUND in gRPC
+      console.log(`Repository ${repositoryId} does not exist in ${location}.`);
+      return false;
+    }
+    console.error(`Error checking repository ${repositoryId}:`, error);
+    throw error; // Re-throw other errors
+  }
+}
+
+/**
+ * Creates an Artifact Registry repository.
+ */
+async function createArtifactRegistryRepo(location, repositoryId, format = 'DOCKER') {
+  const parent = artifactRegistryClient.locationPath(projectId, location);
+  const repository = {
+    format: format,
+    name: artifactRegistryClient.repositoryPath(projectId, location, repositoryId),
+  };
+
+  try {
+    console.log(`Preparing to create Artifact Registry repository ${repositoryId} in ${location}...`);
+    const [operation] = await artifactRegistryClient.createRepository({
+      parent: parent,
+      repository: repository,
+      repositoryId: repositoryId,
+    });
+
+    console.log(`Creating Artifact Registry repository ${repositoryId}. Waiting for operation ${operation.name} to complete...`);
+    const [result] = await operation.promise(); // Wait for completion
+
+    console.log(`Artifact Registry repository ${result.name} created successfully.`);
+    return result;
+  } catch (error) {
+    console.error(`Failed to create Artifact Registry repository ${repositoryId}. Error details:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Triggers a Cloud Build job.
+ */
+async function triggerCloudBuild(location, sourceBucketName, sourceBlobName, targetRepoName, targetImageUrl) {
+  const buildSteps = [
+    {
+      name: 'gcr.io/cloud-builders/docker',
+      args: ['build', '-t', targetImageUrl, '.'],
+      dir: '/workspace',
+    },
+  ];
+
+  const build = {
+    source: {
+      storageSource: {
+        bucket: sourceBucketName,
+        object: sourceBlobName,
+      },
+    },
+    steps: buildSteps,
+    images: [targetImageUrl],
+  };
+
+  try {
+    console.log(`Initiating Cloud Build for gs://${sourceBucketName}/${sourceBlobName} in ${location}...`);
+    const [operation] = await cloudBuildClient.createBuild({
+      projectId: projectId,
+      build: build,
+    });
+
+    console.log(`Cloud Build job started (Operation: ${operation.name}). Waiting for completion...`);
+    const buildId = operation.metadata.build.id;
+    let completedBuild;
+    while (true) {
+      const [getBuildOperation] = await cloudBuildClient.getBuild({ projectId, id: buildId });
+      if (['SUCCESS', 'FAILURE', 'INTERNAL_ERROR', 'TIMEOUT', 'CANCELLED'].includes(getBuildOperation.status)) {
+        completedBuild = getBuildOperation;
+        break;
+      }
+      console.log(`Build status: ${getBuildOperation.status}. Waiting...`);
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+
+    if (completedBuild.status === 'SUCCESS') {
+      console.log(`Cloud Build job ${buildId} completed successfully.`);
+      console.log(`Image built: ${completedBuild.results.images[0].name}`);
+      return completedBuild;
+    } else {
+       console.error(`Cloud Build job ${buildId} failed with status: ${completedBuild.status}`);
+       console.error('Build logs:', completedBuild.logUrl);
+       throw new Error(`Cloud Build failed: ${completedBuild.status}`);
+    }
+
+  } catch (error) {
+    console.error(`Error triggering Cloud Build:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Configuration object for deployment
+ * @typedef {Object} DeployConfig
+ * @property {string} projectId - The Google Cloud project ID
+ * @property {string} [serviceName='app'] - The name of the Cloud Run service to deploy
+ * @property {string} [region='europe-west1'] - The Google Cloud region to deploy to
+ * @property {string[]} files - List of files or directories to deploy
+ */
+
+/**
+ * Main deployment function.
+ * @param {DeployConfig} config - The deployment configuration object
+ */
+export async function deploy({ projectId, serviceName = 'app', region = 'europe-west1', files }) {
+  if (!projectId) {
+    console.error("Error: projectId is required in the configuration object.");
+    process.exit(1);
+  }
+
+  if (!files || !Array.isArray(files) || files.length === 0) {
+    console.error("Error: files array is required in the configuration object.");
+    process.exit(1);
+  }
+
+  // Initialize clients with the provided projectId
+  storage = new Storage({ projectId });
+  cloudBuildClient = new CloudBuildClient({ projectId });
+  artifactRegistryClient = new ArtifactRegistryClient({ projectId });
+  runClient = new ServicesClient({ projectId });
+
+  // Set derived configuration values
+  const bucketName = `${projectId}-source-bucket`;
+  const imageUrl = `${region}-docker.pkg.dev/${projectId}/${repoName}/${imageName}:${imageTag}`;
+
+  console.log(`--- Starting Deployment for Project: ${projectId} ---`);
+  console.log(`--- Service Name: ${serviceName} ---`);
+  console.log(`--- Region: ${region} ---`);
+  console.log(`--- Files to deploy: ${files.join(', ')} ---`);
+
+  try {
+    // 1. Ensure Storage Bucket Exists
+    let bucket;
+    const bucketExists = await checkStorageBucketExists(bucketName);
+    if (!bucketExists) {
+      bucket = await createStorageBucket(bucketName, region);
+    } else {
+      bucket = storage.bucket(bucketName);
+    }
+
+    // 2. Zip and Upload Source Code
+    const zipBuffer = await zipFiles(files);
+    await uploadToStorageBucket(bucket, zipBuffer, zipFileName);
+    console.log('Source code uploaded successfully');
+
+    // 3. Ensure Artifact Registry Repo Exists
+    const repoExists = await checkArtifactRegistryRepoExists(region, repoName);
+    if (!repoExists) {
+      await createArtifactRegistryRepo(region, repoName);
+    }
+
+    // 4. Trigger Cloud Build
+    const buildResult = await triggerCloudBuild(region, bucketName, zipFileName, repoName, imageUrl);
+    if (!buildResult || buildResult.status !== 'SUCCESS') {
+       throw new Error('Cloud Build did not complete successfully.');
+    }
+    const builtImageUrl = buildResult.results.images[0].name;
+
+    // 5. Deploy to Cloud Run
+    await deployToCloudRun(region, serviceName, builtImageUrl);
+
+    console.log(`--- Deployment Completed Successfully ---`);
+
+  } catch (error) {
+    console.error(`--- Deployment Failed ---`);
+    console.error(error.message || error);
+  }
+}

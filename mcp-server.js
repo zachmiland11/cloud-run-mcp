@@ -3,6 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 // Support SSE for backward compatibility
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { deploy } from './deploy.js';
 
 const getServer = () => {
   // Create an MCP server with implementation details
