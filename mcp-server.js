@@ -30,9 +30,9 @@ const getServer = () => {
   }, { capabilities: { logging: {} } });
 
 
-  // Register the deploy tool
   server.tool(
     'deploy',
+    'Deploy files to Cloud Run',
     {
       project: z.string().describe('Google Cloud project ID'),
       region: z.string().default('europe-west1').describe('Region to deploy the service to'),
@@ -55,7 +55,7 @@ const getServer = () => {
 
       // Deploy to Cloud Run
       try {
-        // TODO: Should we return intermediate progress messages?
+        // TODO: Should we return intermediate progress messages? we'd need to use sendNotification for that, see https://github.com/modelcontextprotocol/typescript-sdk/blob/main/src/examples/server/jsonResponseStreamableHttp.ts#L46C24-L46C41
         await deploy({
           projectId: project,
           serviceName: service,
