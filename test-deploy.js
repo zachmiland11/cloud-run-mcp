@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { deploy } from './deploy-cloud-run.js'; // Assuming the deploy function is in deploy-cloud-run.js
+import { deploy } from './cloud-run-deploy.js';
 import readline from 'readline/promises';
 import { stdin as input, stdout as output } from 'process';
 

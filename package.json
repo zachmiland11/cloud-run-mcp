@@ -29,6 +29,7 @@
     "@google-cloud/artifact-registry": "^4.0.1",
     "@google-cloud/cloudbuild": "^5.0.1",
     "@google-cloud/iam": "^2.0.1",
+    "@google-cloud/resource-manager": "^6.0.1",
     "@google-cloud/run": "^2.0.1",
     "@google-cloud/service-usage": "^4.1.0",
     "@google-cloud/storage": "^7.16.0",

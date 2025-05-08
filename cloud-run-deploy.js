@@ -23,7 +23,8 @@ import { ArtifactRegistryClient } from '@google-cloud/artifact-registry';
 import { v2 } from '@google-cloud/run';
 const { ServicesClient } = v2;
 import { ServiceUsageClient } from '@google-cloud/service-usage';
-import { IAMClient } from '@google-cloud/iam';
+import iam from '@google-cloud/iam';
+const { PoliciesClient } = iam.v2;
 
 // --- Configuration ---
 const REPO_NAME = 'mcp-cloud-run-deployments';
@@ -397,7 +398,7 @@ export async function deploy({ projectId, serviceName = 'app', region = 'europe-
     cloudBuildClient = new CloudBuildClient({ projectId });
     artifactRegistryClient = new ArtifactRegistryClient({ projectId });
     runClient = new ServicesClient({ projectId });
-    iamClient = new IAMClient({ projectId });
+    iamClient =  new PoliciesClient();
 
     // Set derived configuration values
     const bucketName = `${projectId}-source-bucket`;
