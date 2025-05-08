@@ -23,22 +23,25 @@ import { ArtifactRegistryClient } from '@google-cloud/artifact-registry';
 import { v2 } from '@google-cloud/run';
 const { ServicesClient } = v2;
 import { ServiceUsageClient } from '@google-cloud/service-usage';
+import { IAMClient } from '@google-cloud/iam';
 
 // --- Configuration ---
 const REPO_NAME = 'mcp-cloud-run-deployments';
 const ZIP_FILE_NAME = 'source.zip';
 const IMAGE_TAG = 'latest';
 const REQUIRED_APIS = [
+  'iam.googleapis.com',
   'storage.googleapis.com',
   'cloudbuild.googleapis.com',
   'artifactregistry.googleapis.com',
-  'run.googleapis.com'
+  'run.googleapis.com',
 ];
 
 // --- Initialize Clients ---
 let storage;
 let cloudBuildClient;
 let artifactRegistryClient;
+let iamClient;
 let runClient;
 
 /**
@@ -90,13 +93,14 @@ async function checkCloudRunServiceExists(projectId, location, serviceId) {
 /**
  * Deploys or updates a container to Google Cloud Run.
  */
-async function deployToCloudRun(projectId, location, serviceId, imgUrl) {
+async function deployToCloudRun(projectId, location, serviceId, imgUrl, serviceAccountEmail) {
   const parent = runClient.locationPath(projectId, location);
   const servicePath = runClient.servicePath(projectId, location, serviceId);
 
   const service = {
     template: {
       containers: [{ image: imgUrl }],
+      serviceAccount: serviceAccountEmail, // Use the service account
     },
     invokerIamDisabled: true, // Make public
     labels: {
@@ -329,6 +333,38 @@ async function triggerCloudBuild(projectId, location, sourceBucketName, sourceBl
 }
 
 /**
+ * Ensures a service account exists, creating it if necessary.
+ * Does not assign any 
+ * @param {string} projectId - The Google Cloud project ID.
+ * @param {string} accountId - The ID for the service account.
+ * @param {string} displayName - The display name for the service account.
+ * @returns {Promise<string>} - The email of the service account.
+ */
+async function ensureServiceAccountExists(projectId, accountId, displayName) {
+  const name = `projects/${projectId}/serviceAccounts/${accountId}@${projectId}.iam.gserviceaccount.com`;
+  try {
+    const [sa] = await iamClient.getServiceAccount({ name });
+    console.log(`Service account ${sa.email} already exists.`);
+    return sa.email;
+  } catch (error) {
+    if (error.code === 5) { // 5 corresponds to NOT_FOUND in gRPC
+      console.log(`Service account ${accountId} does not exist. Creating...`);
+      const [sa] = await iamClient.createServiceAccount({
+        name: `projects/${projectId}`,
+        accountId: accountId,
+        serviceAccount: {
+          displayName: displayName,
+        },
+      });
+      console.log(`Service account ${sa.email} created successfully.`);
+      return sa.email;
+    }
+    console.error(`Error checking/creating service account ${accountId}:`, error);
+    throw error;
+  }
+}
+
+/**
  * Configuration object for deployment
  * @typedef {Object} DeployConfig
  * @property {string} projectId - The Google Cloud project ID
@@ -361,10 +397,13 @@ export async function deploy({ projectId, serviceName = 'app', region = 'europe-
     cloudBuildClient = new CloudBuildClient({ projectId });
     artifactRegistryClient = new ArtifactRegistryClient({ projectId });
     runClient = new ServicesClient({ projectId });
+    iamClient = new IAMClient({ projectId });
 
     // Set derived configuration values
     const bucketName = `${projectId}-source-bucket`;
     const imageUrl = `${region}-docker.pkg.dev/${projectId}/${REPO_NAME}/${serviceName}:${IMAGE_TAG}`;
+    const serviceAccountName = `${serviceName}-sa`;
+    const serviceAccountDisplayName = `Service Account for ${serviceName}`;
 
     console.log(`--- Project: ${projectId} ---`);
     console.log(`--- Region: ${region} ---`);
@@ -390,8 +429,11 @@ export async function deploy({ projectId, serviceName = 'app', region = 'europe-
     }
     const builtImageUrl = buildResult.results.images[0].name;
 
-    // 5. Deploy to Cloud Run
-    await deployToCloudRun(projectId, region, serviceName, builtImageUrl);
+    // 5. Ensure Service Account Exists
+    const serviceAccountEmail = await ensureServiceAccountExists(projectId, serviceAccountName, serviceAccountDisplayName);
+
+    // 6. Deploy to Cloud Run
+    await deployToCloudRun(projectId, region, serviceName, builtImageUrl, serviceAccountEmail);
 
     console.log(`--- Deployment Completed Successfully ---`);
 
