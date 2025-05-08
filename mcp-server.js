@@ -114,7 +114,7 @@ const getServer = () => {
             content: [{
               type: 'text',
               // TODO: Format this more nicely, maybe with structured data
-              text: `Name: ${service}\nRegion: ${region}\nProject: ${project}\nURL: ${serviceDetails.uri}\nLast deployed by: ${serviceDetails.lastModifier} at ${serviceDetails.updateTime.toString()}`
+              text: `Name: ${service}\nRegion: ${region}\nProject: ${project}\nURL: ${serviceDetails.uri}\nLast deployed by: ${serviceDetails.lastModifier}`
             }]
           };
         } else {
