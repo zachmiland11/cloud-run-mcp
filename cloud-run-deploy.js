@@ -23,8 +23,6 @@ import { ArtifactRegistryClient } from '@google-cloud/artifact-registry';
 import { v2 } from '@google-cloud/run';
 const { ServicesClient } = v2;
 import { ServiceUsageClient } from '@google-cloud/service-usage';
-import iam from '@google-cloud/iam';
-const { PoliciesClient } = iam.v2;
 
 // --- Configuration ---
 const REPO_NAME = 'mcp-cloud-run-deployments';
@@ -42,7 +40,6 @@ const REQUIRED_APIS = [
 let storage;
 let cloudBuildClient;
 let artifactRegistryClient;
-let iamClient;
 let runClient;
 
 /**
@@ -334,38 +331,6 @@ async function triggerCloudBuild(projectId, location, sourceBucketName, sourceBl
 }
 
 /**
- * Ensures a service account exists, creating it if necessary.
- * Does not assign any 
- * @param {string} projectId - The Google Cloud project ID.
- * @param {string} accountId - The ID for the service account.
- * @param {string} displayName - The display name for the service account.
- * @returns {Promise<string>} - The email of the service account.
- */
-async function ensureServiceAccountExists(projectId, accountId, displayName) {
-  const name = `projects/${projectId}/serviceAccounts/${accountId}@${projectId}.iam.gserviceaccount.com`;
-  try {
-    const [sa] = await iamClient.getServiceAccount({ name });
-    console.log(`Service account ${sa.email} already exists.`);
-    return sa.email;
-  } catch (error) {
-    if (error.code === 5) { // 5 corresponds to NOT_FOUND in gRPC
-      console.log(`Service account ${accountId} does not exist. Creating...`);
-      const [sa] = await iamClient.createServiceAccount({
-        name: `projects/${projectId}`,
-        accountId: accountId,
-        serviceAccount: {
-          displayName: displayName,
-        },
-      });
-      console.log(`Service account ${sa.email} created successfully.`);
-      return sa.email;
-    }
-    console.error(`Error checking/creating service account ${accountId}:`, error);
-    throw error;
-  }
-}
-
-/**
  * Configuration object for deployment
  * @typedef {Object} DeployConfig
  * @property {string} projectId - The Google Cloud project ID
@@ -398,7 +363,6 @@ export async function deploy({ projectId, serviceName = 'app', region = 'europe-
     cloudBuildClient = new CloudBuildClient({ projectId });
     artifactRegistryClient = new ArtifactRegistryClient({ projectId });
     runClient = new ServicesClient({ projectId });
-    iamClient =  new PoliciesClient();
 
     // Set derived configuration values
     const bucketName = `${projectId}-source-bucket`;
