@@ -22,17 +22,49 @@ import { CloudBuildClient } from '@google-cloud/cloudbuild';
 import { ArtifactRegistryClient } from '@google-cloud/artifact-registry';
 import { v2 } from '@google-cloud/run';
 const { ServicesClient } = v2;
+import { ServiceUsageClient } from '@google-cloud/service-usage';
 
 // --- Configuration ---
-const repoName = 'mcp-cloud-run-deployments'; // Automatically created Artifact Registry repo name
-const zipFileName = 'source.zip';
-const imageTag = 'latest';
+const REPO_NAME = 'mcp-cloud-run-deployments';
+const ZIP_FILE_NAME = 'source.zip';
+const IMAGE_TAG = 'latest';
+const REQUIRED_APIS = [
+  'storage.googleapis.com',
+  'cloudbuild.googleapis.com',
+  'artifactregistry.googleapis.com',
+  'run.googleapis.com'
+];
 
 // --- Initialize Clients ---
 let storage;
 let cloudBuildClient;
 let artifactRegistryClient;
 let runClient;
+
+/**
+ * Ensures that all necessary Google Cloud APIs are enabled for the project.
+ * @param {string} projectId - The Google Cloud project ID.
+ * @param {string[]} apis - An array of API identifiers (e.g., 'run.googleapis.com').
+ */
+async function ensureApisEnabled(projectId, apis) {
+  const serviceUsageClient = new ServiceUsageClient({ projectId });
+  console.log('Checking and enabling required APIs...');
+
+  for (const api of apis) {
+    const serviceName = `projects/${projectId}/services/${api}`;
+    try {
+      const [service] = await serviceUsageClient.getService({ name: serviceName });
+      if (service.state !== 'ENABLED') {
+        console.log(`API [${api}] is not enabled. Enabling...`);
+        const [operation] = await serviceUsageClient.enableService({ name: serviceName });
+        await operation.promise();
+      }
+    } catch (error) {
+      throw new Error(`Failed to ensure API [${api}] is enabled. Please check manually.`);
+    }
+  }
+  console.log('All required APIs are enabled.');
+}
 
 /**
  * Checks if a Cloud Run service exists.
@@ -320,36 +352,39 @@ export async function deploy({ projectId, serviceName = 'app', region = 'europe-
     process.exit(1);
   }
 
-  // Initialize clients with the provided projectId
-  storage = new Storage({ projectId });
-  cloudBuildClient = new CloudBuildClient({ projectId });
-  artifactRegistryClient = new ArtifactRegistryClient({ projectId });
-  runClient = new ServicesClient({ projectId });
-
-  // Set derived configuration values
-  const bucketName = `${projectId}-source-bucket`;
-  const imageUrl = `${region}-docker.pkg.dev/${projectId}/${repoName}/${serviceName}:${imageTag}`;
-
-  console.log(`--- Project: ${projectId} ---`);
-  console.log(`--- Region: ${region} ---`);
-  console.log(`--- Service Name: ${serviceName} ---`);
-  console.log(`--- Files to deploy: ${files.join(', ')} ---`);
-
   try {
+    // 0. Ensure all required APIs are enabled
+    await ensureApisEnabled(projectId, REQUIRED_APIS);
+
+    // Initialize clients with the provided projectId
+    storage = new Storage({ projectId });
+    cloudBuildClient = new CloudBuildClient({ projectId });
+    artifactRegistryClient = new ArtifactRegistryClient({ projectId });
+    runClient = new ServicesClient({ projectId });
+
+    // Set derived configuration values
+    const bucketName = `${projectId}-source-bucket`;
+    const imageUrl = `${region}-docker.pkg.dev/${projectId}/${REPO_NAME}/${serviceName}:${IMAGE_TAG}`;
+
+    console.log(`--- Project: ${projectId} ---`);
+    console.log(`--- Region: ${region} ---`);
+    console.log(`--- Service Name: ${serviceName} ---`);
+    console.log(`--- Files to deploy: ${files.join(', ')} ---`);
+
     // 1. Ensure Storage Bucket Exists
     // Use the combined function
     const bucket = await ensureStorageBucketExists(bucketName, region);
 
     // 2. Zip and Upload Source Code
     const zipBuffer = await zipFiles(files);
-    await uploadToStorageBucket(bucket, zipBuffer, zipFileName);
+    await uploadToStorageBucket(bucket, zipBuffer, ZIP_FILE_NAME);
     console.log('Source code uploaded successfully');
 
     // 3. Ensure Artifact Registry Repo Exists
-    await ensureArtifactRegistryRepoExists(projectId, region, repoName);
+    await ensureArtifactRegistryRepoExists(projectId, region, REPO_NAME);
 
     // 4. Trigger Cloud Build
-    const buildResult = await triggerCloudBuild(projectId, region, bucketName, zipFileName, repoName, imageUrl);
+    const buildResult = await triggerCloudBuild(projectId, region, bucketName, ZIP_FILE_NAME, REPO_NAME, imageUrl);
     if (!buildResult || buildResult.status !== 'SUCCESS') {
        throw new Error('Cloud Build did not complete successfully.');
     }

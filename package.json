@@ -29,6 +29,7 @@
     "@google-cloud/artifact-registry": "^4.0.1",
     "@google-cloud/cloudbuild": "^5.0.1",
     "@google-cloud/run": "^2.0.1",
+    "@google-cloud/service-usage": "^1.2.1",
     "@google-cloud/storage": "^7.16.0",
     "@modelcontextprotocol/sdk": "^1.11.0",
     "archiver": "^7.0.1",
