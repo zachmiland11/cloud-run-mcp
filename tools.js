@@ -126,13 +126,13 @@ export const registerTools = (server) => {
   );
 
   server.tool(
-    'deploy',
-    'Deploy files to Cloud Run',
+    'deploy-local-files',
+    'Deploy local files to Cloud Run. Takes an array of absolute file paths from the local filesystem that will be deployed.',
     {
       project: z.string().describe('Google Cloud project ID'),
       region: z.string().default('europe-west1').describe('Region to deploy the service to'),
       service: z.string().default('app').describe('Name of the Cloud Run service to deploy to'),
-      files: z.array(z.string()).describe('Files to deploy (provided as file path on the local filesystem)'),
+      files: z.array(z.string()).describe('Array of absolute file paths to deploy (e.g. ["/home/user/project/src/index.js", "/home/user/project/package.json"])'),
     },
     async ({ project, region, service, files }) => {
       console.log({ project, region, service, files });
