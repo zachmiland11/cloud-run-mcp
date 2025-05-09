@@ -16,7 +16,7 @@ limitations under the License.
 
 import { z } from "zod";
 import { deploy } from './cloud-run-deploy.js';
-import { listServices, getService } from './cloud-run-crud.js';
+import { listServices, getService } from './cloud-run-get.js';
 import { listProjects } from './gcp-projects.js';
 
 export const registerTools = (server) => {
