@@ -24,7 +24,7 @@ import { v2 } from '@google-cloud/run';
 const { ServicesClient } = v2;
 import { ServiceUsageClient } from '@google-cloud/service-usage';
 
-// --- Configuration ---
+// Configuration
 const REPO_NAME = 'mcp-cloud-run-deployments';
 const ZIP_FILE_NAME = 'source.zip';
 const IMAGE_TAG = 'latest';
@@ -36,7 +36,7 @@ const REQUIRED_APIS = [
   'run.googleapis.com',
 ];
 
-// --- Initialize Clients ---
+// Initialize Clients
 let storage;
 let cloudBuildClient;
 let artifactRegistryClient;
@@ -282,14 +282,32 @@ async function ensureArtifactRegistryRepoExists(projectId, location, repositoryI
 /**
  * Triggers a Cloud Build job.
  */
-async function triggerCloudBuild(projectId, location, sourceBucketName, sourceBlobName, targetRepoName, targetImageUrl) {
-  const buildSteps = [
-    {
-      name: 'gcr.io/cloud-builders/docker',
-      args: ['build', '-t', targetImageUrl, '.'],
-      dir: '/workspace',
-    },
-  ];
+async function triggerCloudBuild(projectId, location, sourceBucketName, sourceBlobName, targetRepoName, targetImageUrl, hasDockerfile) {
+  let buildSteps;
+
+  if (hasDockerfile) {
+    buildSteps = [
+      {
+        name: 'gcr.io/cloud-builders/docker',
+        args: ['build', '-t', targetImageUrl, '.'],
+        dir: '/workspace',
+      },
+    ];
+  } else {
+    buildSteps = [
+      {
+        name: 'gcr.io/k8s-skaffold/pack',
+        entrypoint: 'pack',
+        args: [
+          'build',
+          targetImageUrl,
+          '--builder',
+          'gcr.io/buildpacks/builder:latest',
+        ],
+        dir: '/workspace',
+      },
+    ];
+  }
 
   const build = {
     source: {
@@ -376,10 +394,27 @@ export async function deploy({ projectId, serviceName = 'app', region = 'europe-
     const bucketName = `${projectId}-source-bucket`;
     const imageUrl = `${region}-docker.pkg.dev/${projectId}/${REPO_NAME}/${serviceName}:${IMAGE_TAG}`;
 
-    console.log(`--- Project: ${projectId} ---`);
-    console.log(`--- Region: ${region} ---`);
-    console.log(`--- Service Name: ${serviceName} ---`);
-    console.log(`--- Files to deploy: ${files.length} ---`);
+    console.log(`Project: ${projectId}`);
+    console.log(`Region: ${region}`);
+    console.log(`Service Name: ${serviceName}`);
+    console.log(`Files to deploy: ${files.length}`);
+
+    // Check for Dockerfile
+    let hasDockerfile = false;
+    for (const file of files) {
+      if (typeof file === 'string') {
+        if (path.basename(file).toLowerCase() === 'dockerfile') {
+          hasDockerfile = true;
+          break;
+        }
+      } else if (typeof file === 'object' && file.filename) {
+        if (path.basename(file.filename).toLowerCase() === 'dockerfile') {
+          hasDockerfile = true;
+          break;
+        }
+      }
+    }
+    console.log(`Dockerfile: ${hasDockerfile}`);
 
     // Ensure Storage Bucket Exists
     const bucket = await ensureStorageBucketExists(bucketName, region);
@@ -393,7 +428,7 @@ export async function deploy({ projectId, serviceName = 'app', region = 'europe-
     await ensureArtifactRegistryRepoExists(projectId, region, REPO_NAME);
 
     // Trigger Cloud Build
-    const buildResult = await triggerCloudBuild(projectId, region, bucketName, ZIP_FILE_NAME, REPO_NAME, imageUrl);
+    const buildResult = await triggerCloudBuild(projectId, region, bucketName, ZIP_FILE_NAME, REPO_NAME, imageUrl, hasDockerfile);
     if (!buildResult || buildResult.status !== 'SUCCESS') {
        throw new Error('Cloud Build did not complete successfully.');
     }
@@ -401,11 +436,11 @@ export async function deploy({ projectId, serviceName = 'app', region = 'europe-
 
     const service = await deployToCloudRun(projectId, region, serviceName, builtImageUrl);
 
-    console.log(`--- Deployment Completed Successfully ---`);
+    console.log(`Deployment Completed Successfully`);
     return service;
 
   } catch (error) {
-    console.error(`--- Deployment Failed ---`);
+    console.error(`Deployment Failed`);
     console.error(error.message || error);
     throw error;
   }

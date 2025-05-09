@@ -17,6 +17,8 @@ limitations under the License.
 import { deploy } from './cloud-run-deploy.js';
 import readline from 'readline/promises';
 import { stdin as input, stdout as output } from 'process';
+import fs from 'fs/promises';
+import path from 'path';
 
 /**
  * Gets the project ID from command line arguments or prompts the user.
@@ -39,13 +41,12 @@ async function getProjectId() {
   return projectId;
 }
 
-
 const projectId = await getProjectId();
 
-// Configuration for deployment
-const config = {
+// Configuration for Go deployment with Dockerfile
+const configGoWithDockerfile = {
   projectId: projectId, // Use the obtained project ID
-  serviceName: 'example-go-app', // Name of the Cloud Run service
+  serviceName: 'example-go-app-docker', // Name of the Cloud Run service
   region: 'europe-west1', // Google Cloud region
   files: [
     'example-sources-to-deploy/main.go',
@@ -54,5 +55,49 @@ const config = {
   ]
 };
 
-await deploy(config);
+// Configuration for Go deployment without Dockerfile (using buildpacks)
+const configGoWithoutDockerfile = {
+  projectId: projectId,
+  serviceName: 'example-go-app-buildpack',
+  region: 'europe-west1',
+  files: [
+    'example-sources-to-deploy/main.go',
+    'example-sources-to-deploy/go.mod'
+    // Dockerfile is intentionally omitted here
+  ]
+};
+
+// Configuration for Go deployment with file content (using buildpacks)
+const configGoWithContent = {
+  projectId: projectId,
+  serviceName: 'example-go-app-content',
+  region: 'europe-west1',
+  files: [] // To be populated with file content
+};
+
+
+try {
+  console.log("--- Testing Go deployment with Dockerfile ---");
+  await deploy(configGoWithDockerfile);
+  console.log("--- Go deployment with Dockerfile test completed ---");
+
+  console.log("\n--- Testing Go deployment without Dockerfile (Buildpacks) ---");
+  await deploy(configGoWithoutDockerfile);
+  console.log("--- Go deployment without Dockerfile (Buildpacks) test completed ---");
+
+  console.log("\n--- Testing Go deployment with file content (Buildpacks) ---");
+  const mainGoContent = await fs.readFile(path.resolve('example-sources-to-deploy/main.go'), 'utf-8');
+  const goModContent = await fs.readFile(path.resolve('example-sources-to-deploy/go.mod'), 'utf-8');
+  configGoWithContent.files = [
+    { filename: 'main.go', content: mainGoContent },
+    { filename: 'go.mod', content: goModContent }
+  ];
+  await deploy(configGoWithContent);
+  console.log("--- Go deployment with file content (Buildpacks) test completed ---");
+
+} catch (error) {
+  console.error("Deployment test failed:", error);
+  process.exit(1);
+}
+
 
