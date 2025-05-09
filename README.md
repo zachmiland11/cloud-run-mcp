@@ -46,7 +46,7 @@ An MCP server to deploy code to Google Cloud Run.
 
 ## Use as remote MCP server
 
-When using as a remote MCP server, only the "deploy file content" tool can be used. The `deploy-local-files` tool is not supported as it expects to be able to access the local file system.
+When using as a remote MCP server, only the `deploy-file-contents` tool can be used. The `deploy-local-files` tool is not supported as it expects to be able to access the local file system.
 
 > [!WARNING]  
 > The MCP server currently does not support authentication. Anyone with the URL can deploy code to your Google Cloud project.
