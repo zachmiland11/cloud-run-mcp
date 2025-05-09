@@ -152,18 +152,17 @@ export const registerTools = (server) => {
       // Deploy to Cloud Run
       try {
         // TODO: Should we return intermediate progress messages? we'd need to use sendNotification for that, see https://github.com/modelcontextprotocol/typescript-sdk/blob/main/src/examples/server/jsonResponseStreamableHttp.ts#L46C24-L46C41
-        await deploy({
+        const response = await deploy({
           projectId: project,
           serviceName: service,
           region: region,
           files: files,
         });
         return {
-          // TODO: return URL to the deployed service
           content: [
             {
               type: 'text',
-              text: `Files deployed to Cloud Run service ${service} in project ${project}`,
+              text: `Cloud Run service ${service} deployed in project ${project}\nCloud Console: https://console.cloud.google.com/run/detail/${region}/${service}?project=${project}\nService URL: ${response.uri}`,
             }
           ],
         };
