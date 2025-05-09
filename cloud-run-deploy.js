@@ -91,14 +91,13 @@ async function checkCloudRunServiceExists(projectId, location, serviceId) {
 /**
  * Deploys or updates a container to Google Cloud Run.
  */
-async function deployToCloudRun(projectId, location, serviceId, imgUrl, serviceAccountEmail) {
+async function deployToCloudRun(projectId, location, serviceId, imgUrl) {
   const parent = runClient.locationPath(projectId, location);
   const servicePath = runClient.servicePath(projectId, location, serviceId);
 
   const service = {
     template: {
       containers: [{ image: imgUrl }],
-      serviceAccount: serviceAccountEmail, // Use the service account
     },
     invokerIamDisabled: true, // Make public
     labels: {
@@ -195,18 +194,27 @@ function zipFiles(files) {
       reject(err);
     });
 
-    // Add each file or directory to the zip
+    // Add each file to the zip
     files.forEach(file => {
-      const filePath = path.resolve(file);
-      if (!fs.existsSync(filePath)) {
-        throw new Error(`File or directory not found: ${filePath}`);
-      }
-      
-      const stats = fs.statSync(filePath);
-      if (stats.isDirectory()) {
-        archive.directory(filePath, path.basename(filePath));
+      // Check if this is a file content object or a local file path
+      if (typeof file === 'object' && 'filename' in file && 'content' in file) {
+        // This is a file content object
+        archive.append(file.content, { name: file.filename });
+      } else if (typeof file === 'string') {
+        // This is a local file path
+        const filePath = path.resolve(file);
+        if (!fs.existsSync(filePath)) {
+          throw new Error(`File or directory not found: ${filePath}`);
+        }
+        
+        const stats = fs.statSync(filePath);
+        if (stats.isDirectory()) {
+          archive.directory(filePath, path.basename(filePath));
+        } else {
+          archive.file(filePath, { name: path.basename(filePath) });
+        }
       } else {
-        archive.file(filePath, { name: path.basename(filePath) });
+        throw new Error(`Invalid file format: ${JSON.stringify(file)}`);
       }
     });
 
@@ -367,38 +375,32 @@ export async function deploy({ projectId, serviceName = 'app', region = 'europe-
     // Set derived configuration values
     const bucketName = `${projectId}-source-bucket`;
     const imageUrl = `${region}-docker.pkg.dev/${projectId}/${REPO_NAME}/${serviceName}:${IMAGE_TAG}`;
-    const serviceAccountName = `${serviceName}-sa`;
-    const serviceAccountDisplayName = `Service Account for ${serviceName}`;
 
     console.log(`--- Project: ${projectId} ---`);
     console.log(`--- Region: ${region} ---`);
     console.log(`--- Service Name: ${serviceName} ---`);
-    console.log(`--- Files to deploy: ${files.join(', ')} ---`);
+    console.log(`--- Files to deploy: ${files.length} ---`);
 
-    // 1. Ensure Storage Bucket Exists
-    // Use the combined function
+    // Ensure Storage Bucket Exists
     const bucket = await ensureStorageBucketExists(bucketName, region);
 
-    // 2. Zip and Upload Source Code
+    // Zip and Upload Source Code
     const zipBuffer = await zipFiles(files);
     await uploadToStorageBucket(bucket, zipBuffer, ZIP_FILE_NAME);
     console.log('Source code uploaded successfully');
 
-    // 3. Ensure Artifact Registry Repo Exists
+    // Ensure Artifact Registry Repo Exists
     await ensureArtifactRegistryRepoExists(projectId, region, REPO_NAME);
 
-    // 4. Trigger Cloud Build
+    // Trigger Cloud Build
     const buildResult = await triggerCloudBuild(projectId, region, bucketName, ZIP_FILE_NAME, REPO_NAME, imageUrl);
     if (!buildResult || buildResult.status !== 'SUCCESS') {
        throw new Error('Cloud Build did not complete successfully.');
     }
     const builtImageUrl = buildResult.results.images[0].name;
 
-    // 5. Ensure Service Account Exists
-    const serviceAccountEmail = await ensureServiceAccountExists(projectId, serviceAccountName, serviceAccountDisplayName);
-
-    // 6. Deploy to Cloud Run
-    await deployToCloudRun(projectId, region, serviceName, builtImageUrl, serviceAccountEmail);
+    // Deploy to Cloud Run
+    await deployToCloudRun(projectId, region, serviceName, builtImageUrl);
 
     console.log(`--- Deployment Completed Successfully ---`);
 

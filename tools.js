@@ -127,7 +127,7 @@ export const registerTools = (server) => {
 
   server.tool(
     'deploy-local-files',
-    'Deploy local files to Cloud Run. Takes an array of absolute file paths from the local filesystem that will be deployed.',
+    'Deploy local files to Cloud Run. Takes an array of absolute file paths from the local filesystem that will be deployed. Use this tool if the files exists on the user local filesystem.',
     {
       project: z.string().describe('Google Cloud project ID'),
       region: z.string().default('europe-west1').describe('Region to deploy the service to'),
@@ -152,6 +152,67 @@ export const registerTools = (server) => {
       // Deploy to Cloud Run
       try {
         // TODO: Should we return intermediate progress messages? we'd need to use sendNotification for that, see https://github.com/modelcontextprotocol/typescript-sdk/blob/main/src/examples/server/jsonResponseStreamableHttp.ts#L46C24-L46C41
+        const response = await deploy({
+          projectId: project,
+          serviceName: service,
+          region: region,
+          files: files,
+        });
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Cloud Run service ${service} deployed in project ${project}\nCloud Console: https://console.cloud.google.com/run/detail/${region}/${service}?project=${project}\nService URL: ${response.uri}`,
+            }
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error deploying to Cloud Run: ${error}`,
+            }
+          ],
+        };
+      }
+    });
+
+  server.tool(
+    'deploy-file-contents',
+    'Deploy files to Cloud Run by providing their contents directly. Takes an array of file objects containing filename and content. Use this tool if the files only exist in the current chat context.',
+    {
+      project: z.string().describe('Google Cloud project ID'),
+      region: z.string().default('europe-west1').describe('Region to deploy the service to'),
+      service: z.string().default('app').describe('Name of the Cloud Run service to deploy to'),
+      files: z.array(z.object({
+        filename: z.string().describe('Name and path of the file (e.g. "src/index.js" or "data/config.json")'),
+        content: z.string().optional().describe('Text content of the file'),
+      })).describe('Array of file objects containing filename and content'),
+    },
+    async ({ project, region, service, files }) => {
+      console.log({ project, region, service, files });
+      console.log(`New deploy request: ${JSON.stringify({ project, region, service, files })}`);
+
+      if (typeof project !== 'string') {
+        throw new Error('Project must specified, please prompt the user for a valid existing Google Cloud project ID.');
+      }
+      if (typeof files !== 'object' || !Array.isArray(files)) {
+        throw new Error('Files must be specified');
+      }
+      if (files.length === 0) {
+        throw new Error('No files specified for deployment');
+      }
+
+      // Validate that each file has either content
+      for (const file of files) {
+        if (!file.content) {
+          throw new Error(`File ${file.filename} must have content`);
+        }
+      }
+
+      // Deploy to Cloud Run
+      try {
         const response = await deploy({
           projectId: project,
           serviceName: service,
