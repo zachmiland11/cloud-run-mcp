@@ -399,13 +399,14 @@ export async function deploy({ projectId, serviceName = 'app', region = 'europe-
     }
     const builtImageUrl = buildResult.results.images[0].name;
 
-    // Deploy to Cloud Run
-    await deployToCloudRun(projectId, region, serviceName, builtImageUrl);
+    const service = await deployToCloudRun(projectId, region, serviceName, builtImageUrl);
 
     console.log(`--- Deployment Completed Successfully ---`);
+    return service;
 
   } catch (error) {
     console.error(`--- Deployment Failed ---`);
     console.error(error.message || error);
+    throw error;
   }
 }
