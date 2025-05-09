@@ -201,8 +201,14 @@ function zipFiles(files) {
         // This is a file content object
         archive.append(file.content, { name: file.filename });
       } else if (typeof file === 'string') {
-        // This is a local file path
-        const filePath = path.resolve(file);
+        // This is a local file path     
+        let pathInput = file;
+
+        // This is a "hack" to better support WSL on Windows. AI agents tend to send path that start with '/c' in that case. Re-write it to '/mnt/c'
+        if (pathInput.startsWith('/c')) {
+          pathInput = `/mnt${pathInput}`;
+        }
+        const filePath = path.resolve(pathInput);
         if (!fs.existsSync(filePath)) {
           throw new Error(`File or directory not found: ${filePath}`);
         }
