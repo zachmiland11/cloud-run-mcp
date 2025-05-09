@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 import express from 'express';
-import { McpServer, ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 // Support SSE for backward compatibility
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
