@@ -7,7 +7,7 @@
   "scripts": {
     "deploy": "gcloud run deploy cloud-run-mcp --source . --no-invoker-iam-check",
     "test": "npx @modelcontextprotocol/inspector node index.js",
-    "test:deploy": "node test-deploy.js",
+    "test:deploy": "node test/test-deploy.js",
     "start": "node mcp-server.js"
   },
   "repository": {

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-import { deploy } from './cloud-run-deploy.js';
+import { deploy } from '../cloud-run-deploy.js';
 import readline from 'readline/promises';
 import { stdin as input, stdout as output } from 'process';
 import fs from 'fs/promises';
@@ -49,9 +49,9 @@ const configGoWithDockerfile = {
   serviceName: 'example-go-app-docker', // Name of the Cloud Run service
   region: 'europe-west1', // Google Cloud region
   files: [
-    'example-sources-to-deploy/main.go',
-    'example-sources-to-deploy/go.mod',
-    'example-sources-to-deploy/Dockerfile'
+    '../example-sources-to-deploy/main.go',
+    '../example-sources-to-deploy/go.mod',
+    '../example-sources-to-deploy/Dockerfile'
   ]
 };
 
@@ -61,8 +61,8 @@ const configGoWithoutDockerfile = {
   serviceName: 'example-go-app-buildpack',
   region: 'europe-west1',
   files: [
-    'example-sources-to-deploy/main.go',
-    'example-sources-to-deploy/go.mod'
+    '../example-sources-to-deploy/main.go',
+    '../example-sources-to-deploy/go.mod'
     // Dockerfile is intentionally omitted here
   ]
 };
@@ -86,8 +86,8 @@ try {
   console.log("--- Go deployment without Dockerfile (Buildpacks) test completed ---");
 
   console.log("\n--- Testing Go deployment with file content (Buildpacks) ---");
-  const mainGoContent = await fs.readFile(path.resolve('example-sources-to-deploy/main.go'), 'utf-8');
-  const goModContent = await fs.readFile(path.resolve('example-sources-to-deploy/go.mod'), 'utf-8');
+  const mainGoContent = await fs.readFile(path.resolve('../example-sources-to-deploy/main.go'), 'utf-8');
+  const goModContent = await fs.readFile(path.resolve('../example-sources-to-deploy/go.mod'), 'utf-8');
   configGoWithContent.files = [
     { filename: 'main.go', content: mainGoContent },
     { filename: 'go.mod', content: goModContent }
@@ -99,5 +99,3 @@ try {
   console.error("Deployment test failed:", error);
   process.exit(1);
 }
-
-

@@ -34,7 +34,7 @@ information on using pull requests.
 
 ### To test a simple deployment (not using MCP)
 
-See the `test-deploy.js` script. Run it with:
+See the `test/test-deploy.js` script. Run it with:
 
 ```bash
 npm run test:deploy
