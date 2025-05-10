@@ -69,6 +69,10 @@ async function ensureApisEnabled(projectId, apis) {
 
 /**
  * Checks if a Cloud Run service exists.
+ * @param {string} projectId - The Google Cloud project ID.
+ * @param {string} location - The Google Cloud region (e.g., 'us-central1').
+ * @param {string} serviceId - The ID of the Cloud Run service.
+ * @returns {Promise<boolean>} A promise that resolves to true if the service exists, false otherwise.
  */
 async function checkCloudRunServiceExists(projectId, location, serviceId) {
   const parent = runClient.locationPath(projectId, location);
@@ -90,6 +94,11 @@ async function checkCloudRunServiceExists(projectId, location, serviceId) {
 
 /**
  * Deploys or updates a container to Google Cloud Run.
+ * @param {string} projectId - The Google Cloud project ID.
+ * @param {string} location - The Google Cloud region (e.g., 'us-central1').
+ * @param {string} serviceId - The ID of the Cloud Run service.
+ * @param {string} imgUrl - The URL of the container image to deploy.
+ * @returns {Promise<object>} A promise that resolves to the deployed service object.
  */
 async function deployToCloudRun(projectId, location, serviceId, imgUrl) {
   const parent = runClient.locationPath(projectId, location);
@@ -134,6 +143,9 @@ async function deployToCloudRun(projectId, location, serviceId, imgUrl) {
 
 /**
  * Ensures a Google Cloud Storage bucket exists, creating it if necessary.
+ * @param {string} bucketName - The name of the bucket.
+ * @param {string} [location='us'] - The location to create the bucket in if it doesn't exist.
+ * @returns {Promise<import('@google-cloud/storage').Bucket>} A promise that resolves to the bucket object.
  */
 async function ensureStorageBucketExists(bucketName, location = 'us') {
   const bucket = storage.bucket(bucketName);
@@ -165,7 +177,8 @@ async function ensureStorageBucketExists(bucketName, location = 'us') {
 
 /**
  * Zips a list of files and directories into a memory buffer.
- * @param {string[]} files - List of files and directories to zip
+ * @param {(string|{filename: string, content: Buffer|string})[]} files - List of files and directories to zip.
+ * Each element can be a string path or an object with filename and content.
  * @returns {Promise<Buffer>} - Returns a promise that resolves to the zip file buffer
  */
 function zipFiles(files) {
@@ -230,6 +243,10 @@ function zipFiles(files) {
 
 /**
  * Uploads a buffer to a Google Cloud Storage bucket.
+ * @param {import('@google-cloud/storage').Bucket} bucket - The GCS bucket object.
+ * @param {Buffer} buffer - The buffer to upload.
+ * @param {string} destinationBlobName - The name of the blob in the bucket.
+ * @returns {Promise<import('@google-cloud/storage').File>} A promise that resolves to the uploaded file object.
  */
 async function uploadToStorageBucket(bucket, buffer, destinationBlobName) {
   try {
@@ -245,6 +262,11 @@ async function uploadToStorageBucket(bucket, buffer, destinationBlobName) {
 
 /**
  * Ensures an Artifact Registry repository exists, creating it if necessary.
+ * @param {string} projectId - The Google Cloud project ID.
+ * @param {string} location - The Google Cloud region (e.g., 'us-central1').
+ * @param {string} repositoryId - The ID of the Artifact Registry repository.
+ * @param {string} [format='DOCKER'] - The format of the repository.
+ * @returns {Promise<object>} A promise that resolves to the repository object.
  */
 async function ensureArtifactRegistryRepoExists(projectId, location, repositoryId, format = 'DOCKER') {
   // Construct the parent path string manually
@@ -287,6 +309,14 @@ async function ensureArtifactRegistryRepoExists(projectId, location, repositoryI
 
 /**
  * Triggers a Cloud Build job.
+ * @param {string} projectId - The Google Cloud project ID.
+ * @param {string} location - The Google Cloud region where the build should run.
+ * @param {string} sourceBucketName - The GCS bucket name containing the source code.
+ * @param {string} sourceBlobName - The GCS blob name (zip file) of the source code.
+ * @param {string} targetRepoName - The Artifact Registry repository name.
+ * @param {string} targetImageUrl - The full image URL for the built container.
+ * @param {boolean} hasDockerfile - Indicates if a Dockerfile is present in the source.
+ * @returns {Promise<object>} A promise that resolves to the completed build object.
  */
 async function triggerCloudBuild(projectId, location, sourceBucketName, sourceBlobName, targetRepoName, targetImageUrl, hasDockerfile) {
   let buildSteps;
@@ -368,12 +398,14 @@ async function triggerCloudBuild(projectId, location, sourceBucketName, sourceBl
  * @property {string} projectId - The Google Cloud project ID
  * @property {string} [serviceName='app'] - The name of the Cloud Run service to deploy
  * @property {string} [region='europe-west1'] - The Google Cloud region to deploy to
- * @property {string[]} files - List of files or directories to deploy
+ * @property {(string|{filename: string, content: Buffer|string})[]} files - List of files or directories to deploy.
+ * Each element can be a string path or an object with filename and content.
  */
 
 /**
  * Main deployment function.
- * @param {DeployConfig} config - The deployment configuration object
+ * @param {DeployConfig} config - The deployment configuration object.
+ * @returns {Promise<object>} A promise that resolves to the deployed Cloud Run service object.
  */
 export async function deploy({ projectId, serviceName = 'app', region = 'europe-west1', files }) {
   if (!projectId) {
