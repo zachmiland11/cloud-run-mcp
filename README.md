@@ -103,6 +103,18 @@ When using as a remote MCP server, only the `deploy-file-contents` tool can be u
    When prompted, pick a region, for example `europe-west1`.
 
 4. Update the MCP configuration file of your MCP client with the following, replace `PROJECT_NUMBER` and `REGION` with the values from the previous step:
+
+   ```json 
+    {
+      "mcpServers": {
+        "cloud-run": {
+          "url": "https://cloud-run-mcp-PROJECT_NUMBER.REGION.run.app/sse"
+        }
+      }
+    }
+   ```
+   If your MCP client does not support the `url` attribute, you can use [mcp-remote](https://www.npmjs.com/package/mcp-remote):
+
    ```json 
     {
       "mcpServers": {
