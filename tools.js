@@ -229,9 +229,9 @@ export const registerTools = (server) => {
     'deploy-file-contents',
     'Deploy files to Cloud Run by providing their contents directly. Takes an array of file objects containing filename and content. Use this tool if the files only exist in the current chat context.',
     {
-      project: z.string().describe('Google Cloud project ID. Do not select it yourself, make sure the user provides or confirms the project ID.'),
-      region: z.string().default('europe-west1').describe('Region to deploy the service to'),
-      service: z.string().default('app').describe('Name of the Cloud Run service to deploy to'),
+      project: z.string().optional().describe('Google Cloud project ID. Leave unset for the app to be deployed in a new project. If provided, make sure the user confirms the project ID they want to deploy to.'),
+      region: z.string().optional().default('europe-west1').describe('Region to deploy the service to'),
+      service: z.string().optional().default('app').describe('Name of the Cloud Run service to deploy to'),
       files: z.array(z.object({
         filename: z.string().describe('Name and path of the file (e.g. "src/index.js" or "data/config.json")'),
         content: z.string().optional().describe('Text content of the file'),

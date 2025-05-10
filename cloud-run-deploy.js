@@ -23,6 +23,8 @@ import { ArtifactRegistryClient } from '@google-cloud/artifact-registry';
 import { v2 } from '@google-cloud/run';
 const { ServicesClient } = v2;
 import { ServiceUsageClient } from '@google-cloud/service-usage';
+import { createProject } from './gcp-projects.js';
+import { listBillingAccounts, attachProjectToBillingAccount } from './gcp-billing-accounts.js';
 
 // Configuration
 const REPO_NAME = 'mcp-cloud-run-deployments';
@@ -34,6 +36,7 @@ const REQUIRED_APIS = [
   'cloudbuild.googleapis.com',
   'artifactregistry.googleapis.com',
   'run.googleapis.com',
+  'cloudbilling.googleapis.com',
 ];
 
 // Initialize Clients
@@ -41,6 +44,54 @@ let storage;
 let cloudBuildClient;
 let artifactRegistryClient;
 let runClient;
+
+/**
+ * Ensures a Google Cloud project exists, creating one if an ID is not provided.
+ * If a new project is created, it attempts to attach it to the first available open billing account.
+ * @param {string} [initialProjectId] - An optional existing Google Cloud project ID.
+ * @returns {Promise<string>} A promise that resolves to the project ID to be used.
+ * @throws {Error} If project creation is attempted and fails, or if billing attachment fails critically.
+ */
+async function ensureProjectExists(initialProjectId) {
+  let projectIdToUse = initialProjectId;
+  const wasProjectCreated = !projectIdToUse;
+
+  if (!projectIdToUse) {
+    console.log('Project ID not provided. Attempting to create a new project...');
+    const newProjectDetails = await createProject(); // createProject is imported from ./gcp-projects.js
+    if (!newProjectDetails || !newProjectDetails.projectId) {
+      console.error('Failed to create a new project.');
+      throw new Error('Failed to create a new project for deployment.');
+    }
+    projectIdToUse = newProjectDetails.projectId;
+    console.log(`Successfully created new project: ${projectIdToUse}`);
+  } else {
+    console.log(`Using provided project ID: ${projectIdToUse}`);
+  }
+
+  if (wasProjectCreated) {
+    console.log(`Attempting to attach project ${projectIdToUse} to a billing account...`);
+    const billingAccounts = await listBillingAccounts();
+    if (billingAccounts && billingAccounts.length > 0) {
+      const openAccount = billingAccounts.find(acc => acc.open);
+      if (openAccount) {
+        console.log(`Found open billing account: ${openAccount.displayName} (${openAccount.name})`);
+        const attachmentResult = await attachProjectToBillingAccount(projectIdToUse, openAccount.name);
+        if (attachmentResult && attachmentResult.billingEnabled) {
+          console.log(`Successfully attached project ${projectIdToUse} to billing account ${openAccount.name}.`);
+        } else {
+          throw new Error(`Failed to attach project ${projectIdToUse} to billing account ${openAccount.name}.`);
+        }
+      } else {
+        throw new Error(`Project ${projectIdToUse} was created, but no open billing accounts found. Manual billing setup required.`);
+      }
+    } else {
+      throw new Error(`Project ${projectIdToUse} was created, but no billing accounts found to attach. Manual billing setup required.`);
+    }
+  }
+
+  return projectIdToUse;
+}
 
 /**
  * Ensures that all necessary Google Cloud APIs are enabled for the project.
@@ -395,7 +446,7 @@ async function triggerCloudBuild(projectId, location, sourceBucketName, sourceBl
 /**
  * Configuration object for deployment
  * @typedef {Object} DeployConfig
- * @property {string} projectId - The Google Cloud project ID
+ * @property {string} [projectId] - The Google Cloud project ID. If not provided, a new project will be created automatically.
  * @property {string} [serviceName='app'] - The name of the Cloud Run service to deploy
  * @property {string} [region='europe-west1'] - The Google Cloud region to deploy to
  * @property {(string|{filename: string, content: Buffer|string})[]} files - List of files or directories to deploy.
@@ -407,32 +458,29 @@ async function triggerCloudBuild(projectId, location, sourceBucketName, sourceBl
  * @param {DeployConfig} config - The deployment configuration object.
  * @returns {Promise<object>} A promise that resolves to the deployed Cloud Run service object.
  */
-export async function deploy({ projectId, serviceName = 'app', region = 'europe-west1', files }) {
-  if (!projectId) {
-    console.error("Error: projectId is required in the configuration object.");
-    process.exit(1);
-  }
-
+export async function deploy({ projectId: initialProjectId, serviceName = 'app', region = 'europe-west1', files }) {
   if (!files || !Array.isArray(files) || files.length === 0) {
-    console.error("Error: files array is required in the configuration object.");
-    process.exit(1);
+    console.error("Error: files array is required in the configuration object and cannot be empty.");
+    throw new Error("Files array is required and cannot be empty.");
   }
 
   try {
-    // 0. Ensure all required APIs are enabled
-    await ensureApisEnabled(projectId, REQUIRED_APIS);
+    const currentProjectId = await ensureProjectExists(initialProjectId);
 
-    // Initialize clients with the provided projectId
-    storage = new Storage({ projectId });
-    cloudBuildClient = new CloudBuildClient({ projectId });
-    artifactRegistryClient = new ArtifactRegistryClient({ projectId });
-    runClient = new ServicesClient({ projectId });
+    // 0. Ensure all required APIs are enabled
+    await ensureApisEnabled(currentProjectId, REQUIRED_APIS);
+
+    // Initialize clients with the currentProjectId
+    storage = new Storage({ projectId: currentProjectId });
+    cloudBuildClient = new CloudBuildClient({ projectId: currentProjectId });
+    artifactRegistryClient = new ArtifactRegistryClient({ projectId: currentProjectId });
+    runClient = new ServicesClient({ projectId: currentProjectId });
 
     // Set derived configuration values
-    const bucketName = `${projectId}-source-bucket`;
-    const imageUrl = `${region}-docker.pkg.dev/${projectId}/${REPO_NAME}/${serviceName}:${IMAGE_TAG}`;
+    const bucketName = `${currentProjectId}-source-bucket`;
+    const imageUrl = `${region}-docker.pkg.dev/${currentProjectId}/${REPO_NAME}/${serviceName}:${IMAGE_TAG}`;
 
-    console.log(`Project: ${projectId}`);
+    console.log(`Project: ${currentProjectId}`);
     console.log(`Region: ${region}`);
     console.log(`Service Name: ${serviceName}`);
     console.log(`Files to deploy: ${files.length}`);
@@ -463,16 +511,16 @@ export async function deploy({ projectId, serviceName = 'app', region = 'europe-
     console.log('Source code uploaded successfully');
 
     // Ensure Artifact Registry Repo Exists
-    await ensureArtifactRegistryRepoExists(projectId, region, REPO_NAME);
+    await ensureArtifactRegistryRepoExists(currentProjectId, region, REPO_NAME);
 
     // Trigger Cloud Build
-    const buildResult = await triggerCloudBuild(projectId, region, bucketName, ZIP_FILE_NAME, REPO_NAME, imageUrl, hasDockerfile);
+    const buildResult = await triggerCloudBuild(currentProjectId, region, bucketName, ZIP_FILE_NAME, REPO_NAME, imageUrl, hasDockerfile);
     if (!buildResult || buildResult.status !== 'SUCCESS') {
        throw new Error('Cloud Build did not complete successfully.');
     }
     const builtImageUrl = buildResult.results.images[0].name;
 
-    const service = await deployToCloudRun(projectId, region, serviceName, builtImageUrl);
+    const service = await deployToCloudRun(currentProjectId, region, serviceName, builtImageUrl);
 
     console.log(`Deployment Completed Successfully`);
     return service;

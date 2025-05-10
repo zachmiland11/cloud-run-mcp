@@ -16,6 +16,12 @@ limitations under the License.
 
 import {ProjectsClient} from '@google-cloud/resource-manager';
 
+/**
+ * Lists all accessible Google Cloud Platform projects.
+ * @async
+ * @function listProjects
+ * @returns {Promise<Array<{id: string}>>} A promise that resolves to an array of project objects, each with an 'id' property. Returns an empty array on error.
+ */
 export async function listProjects() {
   const client = new ProjectsClient();
   try {
@@ -26,5 +32,54 @@ export async function listProjects() {
   } catch (error) {
     console.error('Error listing GCP projects:', error);
     return [];
+  }
+}
+
+/**
+ * Creates a new Google Cloud Platform project.
+ * @async
+ * @function createProject
+ * @param {string} [projectId] - Optional. The desired ID for the new project. If not provided, a compliant ID will be generated automatically (e.g., app-cvc-cvc).
+ * @returns {Promise<{projectId: string}|null>} A promise that resolves to an object containing the new project's ID.
+ */
+export async function createProject(projectId) {
+  const client = new ProjectsClient();
+  let projectIdToUse = projectId;
+
+  if (!projectIdToUse) {
+    const consonants = 'bcdfghjklmnpqrstvwxyz';
+    const vowels = 'aeiou';
+
+    const getRandomChar = (source) => source.charAt(Math.floor(Math.random() * source.length));
+
+    const generateCVC = () => {
+      const c1 = getRandomChar(consonants);
+      const v = getRandomChar(vowels);
+      const c2 = getRandomChar(consonants);
+      return `${c1}${v}${c2}`;
+    };
+
+    const cvc1 = generateCVC();
+    const cvc2 = generateCVC();
+    projectIdToUse = `mcp-${cvc1}-${cvc2}`;
+    console.log(`Project ID not provided, generated ID: ${projectIdToUse}`);
+  }
+
+  try {
+    const projectPayload = { projectId: projectIdToUse };
+
+    console.log(`Attempting to create project with ID: ${projectIdToUse}`);
+
+    const [operation] = await client.createProject({ project: projectPayload });
+
+    const [createdProjectResponse] = await operation.promise();
+
+    console.log(`Project ${createdProjectResponse.projectId} created successfully.`);
+    return {
+      projectId: createdProjectResponse.projectId,
+    };
+  } catch (error) {
+    console.error(`Error creating GCP project ${projectIdToUse}:`, error.message);
+    return null;
   }
 }

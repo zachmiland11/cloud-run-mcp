@@ -22,23 +22,29 @@ import path from 'path';
 
 /**
  * Gets the project ID from command line arguments or prompts the user.
- * @returns {Promise<string>} The Google Cloud project ID.
+ * If "new" is provided, it returns undefined to trigger new project creation.
+ * @returns {Promise<string|undefined>} The Google Cloud project ID or undefined.
  */
 async function getProjectId() {
-  let projectId = process.argv[2]; // Get the third element (index 2) which is the first argument
+  let projectIdInput = process.argv[2]; // Get the third element (index 2) which is the first argument
 
-  if (!projectId) {
+  if (!projectIdInput) {
     const rl = readline.createInterface({ input, output });
-    projectId = await rl.question('Please enter your Google Cloud project ID: ');
+    projectIdInput = await rl.question('Please enter your Google Cloud project ID (or type "new" to create one): ');
     rl.close();
   }
 
-  if (!projectId) {
-    console.error('Project ID is required.');
+  if (projectIdInput && projectIdInput.toLowerCase() === 'new') {
+    console.log('Project ID set to "new". A new project will be created.');
+    return undefined;
+  }
+
+  if (!projectIdInput) {
+    console.error('No project ID provided and not "new". Exiting.');
     process.exit(1);
   }
-  console.log(`Using Project ID: ${projectId}`);
-  return projectId;
+  console.log(`Using Project ID: ${projectIdInput}`);
+  return projectIdInput;
 }
 
 const projectId = await getProjectId();
@@ -49,9 +55,9 @@ const configGoWithDockerfile = {
   serviceName: 'example-go-app-docker', // Name of the Cloud Run service
   region: 'europe-west1', // Google Cloud region
   files: [
-    '../example-sources-to-deploy/main.go',
-    '../example-sources-to-deploy/go.mod',
-    '../example-sources-to-deploy/Dockerfile'
+    'example-sources-to-deploy/main.go',
+    'example-sources-to-deploy/go.mod',
+    'example-sources-to-deploy/Dockerfile'
   ]
 };
 
@@ -61,8 +67,8 @@ const configGoWithoutDockerfile = {
   serviceName: 'example-go-app-buildpack',
   region: 'europe-west1',
   files: [
-    '../example-sources-to-deploy/main.go',
-    '../example-sources-to-deploy/go.mod'
+    'example-sources-to-deploy/main.go',
+    'example-sources-to-deploy/go.mod'
     // Dockerfile is intentionally omitted here
   ]
 };
