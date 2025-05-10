@@ -8,6 +8,7 @@ An MCP server to deploy code to Google Cloud Run.
 - `list-services`: Lists Cloud Run services in a given project and region.
 - `get-service`: Gets details for a specific Cloud Run service.
 - `deploy-local-files`: Deploys files from the local file system to a Google Cloud Run service.
+- `deploy-local-folder`: Deploys a local folder to a Google Cloud Run service.
 - `deploy-file-contents`: Deploys files to Cloud Run by providing their contents directly.
 
 ## Use as local MCP server

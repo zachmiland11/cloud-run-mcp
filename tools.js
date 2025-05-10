@@ -178,6 +178,56 @@ export const registerTools = (server) => {
       }
     });
 
+
+  server.tool(
+    'deploy-local-folder',
+    'Deploy a local folder to Cloud Run. Takes an absolute folder path from the local filesystem that will be deployed. Use this tool if the entire folder content needs to be deployed.',
+    {
+      project: z.string().describe('Google Cloud project ID. Do not select it yourself, make sure the user provides or confirms the project ID.'),
+      region: z.string().default('europe-west1').describe('Region to deploy the service to'),
+      service: z.string().default('app').describe('Name of the Cloud Run service to deploy to'),
+      folderPath: z.string().describe('Absolute path to the folder to deploy (e.g. "/home/user/project/src")'),
+    },
+    async ({ project, region, service, folderPath }) => {
+      console.log({ project, region, service, folderPath });
+      console.log(`New folder deploy request: ${JSON.stringify({ project, region, service, folderPath })}`);
+
+      if (typeof project !== 'string') {
+        throw new Error('Project must be specified, please prompt the user for a valid existing Google Cloud project ID.');
+      }
+      if (typeof folderPath !== 'string' || folderPath.trim() === '') {
+        throw new Error('Folder path must be specified and be a non-empty string.');
+      }
+
+      // Deploy to Cloud Run
+      try {
+        const response = await deploy({
+          projectId: project,
+          serviceName: service,
+          region: region,
+          files: [folderPath], // Pass the folder path as a single item in an array
+        });
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Cloud Run service ${service} deployed from folder ${folderPath} in project ${project}\nCloud Console: https://console.cloud.google.com/run/detail/${region}/${service}?project=${project}\nService URL: ${response.uri}`,
+            }
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error deploying folder to Cloud Run: ${error}`,
+            }
+          ],
+        };
+      }
+    }
+  );
+
   server.tool(
     'deploy-file-contents',
     'Deploy files to Cloud Run by providing their contents directly. Takes an array of file objects containing filename and content. Use this tool if the files only exist in the current chat context.',
@@ -238,4 +288,4 @@ export const registerTools = (server) => {
         };
       }
     });
-}; 
+};

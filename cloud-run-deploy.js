@@ -215,7 +215,7 @@ function zipFiles(files) {
         
         const stats = fs.statSync(filePath);
         if (stats.isDirectory()) {
-          archive.directory(filePath, path.basename(filePath));
+          archive.directory(filePath, false); // Add directory contents to the archive root
         } else {
           archive.file(filePath, { name: path.basename(filePath) });
         }
