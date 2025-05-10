@@ -30,7 +30,6 @@ export const registerTools = (server) => {
         return {
           content: [{
             type: 'text',
-            // TODO: Format this more nicely, perhaps as a list of links to individual project resources
             text: `Available GCP Projects:\n${projects.map(p => `- ${p.id}`).join('\n')}`
           }]
         };
@@ -64,7 +63,6 @@ export const registerTools = (server) => {
         return {
           content: [{
             type: 'text',
-            // TODO: Format this more nicely, perhaps as a list of links to individual service resources
             text: `Services in project ${project} (location ${region}):\n${services.map(s => `- ${s.name} (URL: ${s.uri})`).join('\n')}`
           }]
         };
@@ -102,7 +100,6 @@ export const registerTools = (server) => {
           return {
             content: [{
               type: 'text',
-              // TODO: Format this more nicely, maybe with structured data
               text: `Name: ${service}\nRegion: ${region}\nProject: ${project}\nURL: ${serviceDetails.uri}\nLast deployed by: ${serviceDetails.lastModifier}`
             }]
           };
