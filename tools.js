@@ -89,10 +89,10 @@ export const registerTools = (server) => {
     async ({ project, region, service }) => {
       console.log({ project, region, service });
       if (typeof project !== 'string') {
-        return { content: [{ type: 'text', text: "Error: Project ID must be provided and be a non-empty string." }] };
+        return { content: [{ type: 'text', text: "Error: Project ID must be provided." }] };
       }
       if (typeof service !== 'string') {
-        return { content: [{ type: 'text', text: "Error: Service name must be provided and be a non-empty string." }] };
+        return { content: [{ type: 'text', text: "Error: Service name must be provided." }] };
       }
       try {
         const serviceDetails = await getService(project, region, service);
