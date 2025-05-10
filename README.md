@@ -52,8 +52,6 @@ When using as a remote MCP server, only the `deploy-file-contents` tool can be u
 > [!WARNING]  
 > The MCP server currently does not support authentication. Anyone with the URL can deploy code to your Google Cloud project.
 
-0. Install [Node.js](https://nodejs.org/en/download/) (LTS version recommended).
-
 1. Install the [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) and authenticate with your Google account.
 
 2. Set your Google Cloud project ID using the command:
@@ -62,7 +60,7 @@ When using as a remote MCP server, only the `deploy-file-contents` tool can be u
    ```
 3. Deploy the application to Cloud Run:
    ```bash
-   npm run deploy
+   gcloud run deploy cloud-run-mcp --source . --no-invoker-iam-check
    ```
    When prompted, pick a region, for example `europe-west1`.
 
@@ -80,3 +78,5 @@ When using as a remote MCP server, only the `deploy-file-contents` tool can be u
       }
     }
    ```
+
+   (we use [mcp-remote](https://www.npmjs.com/package/mcp-remote) because not all MCP clients support remote servers configured via an `url` attribute.)
