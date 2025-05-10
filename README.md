@@ -14,8 +14,33 @@ An MCP server to deploy code to Google Cloud Run.
 ## Use as local MCP server
 
 > [!NOTE]  
-> These instructions will change when the MCP server is made public. It should be as simple as an `npx` or `docker run` command.
+> These instructions will change when the MCP server is made public and container image or npm module is available.
 
+### Using as a local MCP server via standard input/output (stdio)
+
+0. Install [Node.js](https://nodejs.org/en/download/) (LTS version recommended).
+
+1. Install the [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) and authenticate with your Google account.
+
+2. Set up application credentials using the command:
+   ```bash
+   gcloud auth application-default login
+   ```
+3. Update the MCP configuration file of your MCP client with the following:
+   ```json 
+    {
+      "mcpServers": {
+        "cloud-run": {
+          "command": "node",
+          "args": [
+            "/path/to/mcp-server.js"
+          ]
+        }
+      }
+    }
+   ```
+
+### Using as a local MCP server via http
 
 0. Install [Node.js](https://nodejs.org/en/download/) (LTS version recommended).
 
@@ -31,6 +56,19 @@ An MCP server to deploy code to Google Cloud Run.
    ```
 
 4. Update the MCP configuration file of your MCP client with the following:
+
+   ```json 
+    {
+      "mcpServers": {
+        "cloud-run": {
+          "url": "http://localhost:3000/sse"
+        }
+      }
+    }
+   ```
+
+   If your MCP client does not support the `url` attribute, you can use [mcp-remote](https://www.npmjs.com/package/mcp-remote):
+
    ```json 
     {
       "mcpServers": {
@@ -78,5 +116,3 @@ When using as a remote MCP server, only the `deploy-file-contents` tool can be u
       }
     }
    ```
-
-   (we use [mcp-remote](https://www.npmjs.com/package/mcp-remote) because not all MCP clients support remote servers configured via an `url` attribute.)
