@@ -15,9 +15,9 @@ limitations under the License.
 */
 
 import { z } from "zod";
-import { deploy } from './cloud-run-deploy.js';
-import { listServices, getService } from './cloud-run-get.js';
-import { listProjects } from './gcp-projects.js';
+import { deploy } from './lib/cloud-run-deploy.js';
+import { listServices, getService } from './lib/cloud-run-get.js';
+import { listProjects } from './lib/gcp-projects.js';
 
 export const registerTools = (server) => {
   // Tool to list GCP projects
