@@ -88,28 +88,33 @@ An MCP server to deploy code to Google Cloud Run.
 
 If the Cloud Run MCP server is itself deployed on Cloud Run, only deploying to the same project is supporte, and only the `deploy-file-contents` tool is available.
 
-> [!WARNING]  
-> The MCP server currently does not support authentication. Anyone with the URL can deploy code to your Google Cloud project.
-
 1. Install the [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) and authenticate with your Google account.
 
 2. Set your Google Cloud project ID using the command:
    ```bash
    gcloud config set project YOUR_PROJECT_ID
    ```
-3. Deploy the application to Cloud Run:
+3. Deploy the Cloud Run MCP server to Cloud Run:
    ```bash
-   gcloud run deploy cloud-run-mcp --source . --no-invoker-iam-check
+   gcloud run deploy cloud-run-mcp --source . --no-allow-unauthenticated
    ```
    When prompted, pick a region, for example `europe-west1`.
 
-4. Update the MCP configuration file of your MCP client with the following, replace the URL with the URL of the deployed sevice:
+   Note that the MCP server is *not* publicly accessible, it requires authentication via IAM.
+
+3. Run a Cloud Run proxy on your local machine to connect securely using your identity to the remote MCP server running on Cloud Run:
+   ```bash
+   gcloud run services proxy cloud-run-mcp
+   ```
+   This will create a local proxy on port 8080 that forwards requests to the remote MCP server and injects your identity.
+
+5. Update the MCP configuration file of your MCP client with the following, replace the URL with the URL of the deployed sevice:
 
    ```json 
     {
       "mcpServers": {
         "cloud-run": {
-          "url": "https://cloud-run-mcp-PROJECT_NUMBER.REGION.run.app/sse"
+          "url": "http://localhost:8080/sse"
         }
       }
     }
@@ -123,7 +128,7 @@ If the Cloud Run MCP server is itself deployed on Cloud Run, only deploying to t
           "command": "npx",
           "args": [
             "mcp-remote",
-            "https://cloud-run-mcp-PROJECT_NUMBER.REGION.run.app/sse"
+            "http://localhost:8080/sse"
           ]
         }
       }
