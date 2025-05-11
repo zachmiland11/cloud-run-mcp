@@ -1,6 +1,5 @@
 # TODO
 
-- [ ] Fix stdio
 - [ ] Allow configuring transports
 - [ ] Add intermediate progress (Work in progress, see `notifications` branch)
 - [ ] Add additional checks for billing account, return link to set up billing

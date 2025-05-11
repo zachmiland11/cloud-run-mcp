@@ -17,31 +17,7 @@ An MCP server to deploy code to Google Cloud Run.
 > [!NOTE]  
 > These instructions will change when the MCP server is made public and container image or npm module is available.
 
-### Using as a local MCP server via standard input/output (stdio)
-
-0. Install [Node.js](https://nodejs.org/en/download/) (LTS version recommended).
-
-1. Install the [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) and authenticate with your Google account.
-
-2. Set up application credentials using the command:
-   ```bash
-   gcloud auth application-default login
-   ```
-3. Update the MCP configuration file of your MCP client with the following:
-   ```json 
-    {
-      "mcpServers": {
-        "cloud-run": {
-          "command": "node",
-          "args": [
-            "/path/to/mcp-server.js"
-          ]
-        }
-      }
-    }
-   ```
-
-### Using as a local MCP server via http
+_The Cloud Run MCP server doesn't support the stdio transport, only HTTP transport._
 
 0. Install [Node.js](https://nodejs.org/en/download/) (LTS version recommended).
 
