@@ -4,12 +4,13 @@ An MCP server to deploy code to Google Cloud Run.
 
 ## Tools
 
-- `list-projects`: Lists available GCP projects.
+- `deploy-file-contents`: Deploys files to Cloud Run by providing their contents directly.
+- `deploy-local-files`: Deploys files from the local file system to a Google Cloud Run service _(only available when running locally)_.
+- `deploy-local-folder`: Deploys a local folder to a Google Cloud Run service _(only available when running locally)_.
+- `list-projects`: Lists available GCP projects _(only available when running locally)_.
 - `list-services`: Lists Cloud Run services in a given project and region.
 - `get-service`: Gets details for a specific Cloud Run service.
-- `deploy-local-files`: Deploys files from the local file system to a Google Cloud Run service.
-- `deploy-local-folder`: Deploys a local folder to a Google Cloud Run service.
-- `deploy-file-contents`: Deploys files to Cloud Run by providing their contents directly.
+
 
 ## Use as local MCP server
 
@@ -85,7 +86,7 @@ An MCP server to deploy code to Google Cloud Run.
 
 ## Use as remote MCP server
 
-When using as a remote MCP server, only the `deploy-file-contents` tool can be used. The `deploy-local-files` tool is not supported as it expects to be able to access the local file system.
+If the Cloud Run MCP server is itself deployed on Cloud Run, only deploying to the same project is supporte, and only the `deploy-file-contents` tool is available.
 
 > [!WARNING]  
 > The MCP server currently does not support authentication. Anyone with the URL can deploy code to your Google Cloud project.
@@ -102,7 +103,7 @@ When using as a remote MCP server, only the `deploy-file-contents` tool can be u
    ```
    When prompted, pick a region, for example `europe-west1`.
 
-4. Update the MCP configuration file of your MCP client with the following, replace `PROJECT_NUMBER` and `REGION` with the values from the previous step:
+4. Update the MCP configuration file of your MCP client with the following, replace the URL with the URL of the deployed sevice:
 
    ```json 
     {

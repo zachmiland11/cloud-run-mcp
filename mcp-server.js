@@ -21,16 +21,25 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 // Support stdio, as it is easier to use locally
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { registerTools } from './tools.js';
+import { registerTools, registerToolsRemote } from './tools.js';
+import { checkGCP } from './lib/gcp-metadata.js';
 
-const getServer = () => {
+const gcpInfo = await checkGCP();
+
+async function getServer () {
   // Create an MCP server with implementation details
   const server = new McpServer({
     name: 'cloud-run',
     version: '1.0.0',
   }, { capabilities: { logging: {} } });
 
-  registerTools(server);
+  if (gcpInfo && gcpInfo.project) {
+    console.log(`Running on GCP project: ${gcpInfo.project}, region: ${gcpInfo.region}. Using tools optimized for remote use.`);
+    await registerToolsRemote(server);
+  } else {
+    console.log('Not running on GCP. Using tools optimized for local use.');
+    await registerTools(server);
+  }
 
   return server;
 }
@@ -40,7 +49,7 @@ app.use(express.json());
 
 app.post('/mcp', async (req, res) => {
   console.log('/mcp Received:', req.body);
-  const server = getServer();
+  const server = await getServer();
   try {
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
@@ -97,7 +106,7 @@ const sseTransports = {};
 // Legacy SSE endpoint for older clients
 app.get('/sse', async (req, res) => {
   console.log('/sse Received:', req.body);
-  const server = getServer();
+  const server = await getServer();
   // Create SSE transport for legacy clients
   const transport = new SSEServerTransport('/messages', res);
   sseTransports[transport.sessionId] = transport;
@@ -122,10 +131,14 @@ app.post('/messages', async (req, res) => {
 });
 
 // stdio
-const stdioTransport = new StdioServerTransport();
-const server = getServer();
-await server.connect(stdioTransport);
-console.log('Cloud Run MCP server stdio transport connected');
+if (!gcpInfo || !gcpInfo.project) {
+  const stdioTransport = new StdioServerTransport();
+  const server = await getServer();
+  await server.connect(stdioTransport);
+  console.log('Cloud Run MCP server stdio transport connected');
+} else {
+  console.log('Running on GCP, stdio transport will not be started.');
+}
 
 // Start the server
 const PORT = process.env.PORT || 3000;

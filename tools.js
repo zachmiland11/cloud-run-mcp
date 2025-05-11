@@ -18,6 +18,7 @@ import { z } from "zod";
 import { deploy } from './lib/cloud-run-deploy.js';
 import { listServices, getService } from './lib/cloud-run-get.js';
 import { listProjects } from './lib/gcp-projects.js';
+import { checkGCP } from './lib/gcp-metadata.js';
 
 export const registerTools = (server) => {
   // Tool to list GCP projects
@@ -53,7 +54,6 @@ export const registerTools = (server) => {
       region: z.string().describe("Region where the services are located").default('europe-west1'),
     },
     async ({ project, region }) => {
-      console.log({ project, region });
       if (typeof project !== 'string') {
         return { content: [{ type: 'text', text: "Error: Project ID must be provided and be a non-empty string." }] };
       }
@@ -87,7 +87,6 @@ export const registerTools = (server) => {
       service: z.string().describe("Name of the Cloud Run service"),
     },
     async ({ project, region, service }) => {
-      console.log({ project, region, service });
       if (typeof project !== 'string') {
         return { content: [{ type: 'text', text: "Error: Project ID must be provided." }] };
       }
@@ -132,10 +131,6 @@ export const registerTools = (server) => {
       files: z.array(z.string()).describe('Array of absolute file paths to deploy (e.g. ["/home/user/project/src/index.js", "/home/user/project/package.json"])'),
     },
     async ({ project, region, service, files }) => {
-      console.log({ project, region, service, files });
-      console.log(`New deploy request: ${JSON.stringify({ project, region, service, files })}`);
-
-      // TODO: if remote MCP, just deploy in the same project as the MCP server
       if (typeof project !== 'string') {
         throw new Error('Project must specified, please prompt the user for a valid existing Google Cloud project ID.');
       }
@@ -186,9 +181,6 @@ export const registerTools = (server) => {
       folderPath: z.string().describe('Absolute path to the folder to deploy (e.g. "/home/user/project/src")'),
     },
     async ({ project, region, service, folderPath }) => {
-      console.log({ project, region, service, folderPath });
-      console.log(`New folder deploy request: ${JSON.stringify({ project, region, service, folderPath })}`);
-
       if (typeof project !== 'string') {
         throw new Error('Project must be specified, please prompt the user for a valid existing Google Cloud project ID.');
       }
@@ -238,9 +230,6 @@ export const registerTools = (server) => {
       })).describe('Array of file objects containing filename and content'),
     },
     async ({ project, region, service, files }) => {
-      console.log({ project, region, service, files });
-      console.log(`New deploy request: ${JSON.stringify({ project, region, service, files })}`);
-
       if (typeof project !== 'string') {
         throw new Error('Project must specified, please prompt the user for a valid existing Google Cloud project ID.');
       }
@@ -285,4 +274,134 @@ export const registerTools = (server) => {
         };
       }
     });
+};
+
+export const registerToolsRemote = async (server) => {
+  const gcpInfo = await checkGCP();
+  if (!gcpInfo || !gcpInfo.project) {
+    throw new Error("Cannot register remote tools: GCP project ID could not be determined from the metadata server.");
+  }
+  const currentProject = gcpInfo.project;
+  const currentRegion = gcpInfo.region || 'europe-west1'; // Fallback if region is not available
+
+  // Listing Cloud Run services (Remote)
+  server.tool(
+    "list-services",
+    `Lists Cloud Run services in GCP project ${currentProject} and a given region.`,
+    {
+      region: z.string().describe("Region where the services are located").default(currentRegion),
+    },
+    async ({ region }) => {
+      try {
+        const services = await listServices(currentProject, region);
+        return {
+          content: [{
+            type: 'text',
+            text: `Services in project ${currentProject} (location ${region}):\n${services.map(s => `- ${s.name} (URL: ${s.uri})`).join('\n')}`
+          }]
+        };
+      } catch (error) {
+        return {
+          content: [{
+            type: 'text',
+            text: `Error listing services for project ${currentProject} (region ${region}): ${error.message}`
+          }]
+        };
+      }
+    }
+  );
+
+  // Dynamic resource for getting a specific service (Remote)
+  server.tool(
+    "get-service",
+    `Gets details for a specific Cloud Run service in GCP project ${currentProject}.`,
+    {
+      region: z.string().describe("Region where the service is located").default(currentRegion),
+      service: z.string().describe("Name of the Cloud Run service"),
+    },
+    async ({ region, service }) => {
+      if (typeof service !== 'string') {
+        return { content: [{ type: 'text', text: "Error: Service name must be provided." }] };
+      }
+      try {
+        const serviceDetails = await getService(currentProject, region, service);
+        if (serviceDetails) {
+          return {
+            content: [{
+              type: 'text',
+              text: `Name: ${service}\nRegion: ${region}\nProject: ${currentProject}\nURL: ${serviceDetails.uri}\nLast deployed by: ${serviceDetails.lastModifier}`
+            }]
+          };
+        } else {
+          return {
+            content: [{
+              type: 'text',
+              text: `Service ${service} not found in project ${currentProject} (region ${region}).`
+            }]
+          };
+        }
+      } catch (error) {
+        return {
+          content: [{
+            type: 'text',
+            text: `Error getting service ${service} in project ${currentProject} (region ${region}): ${error.message}`
+          }]
+        };
+      }
+    }
+  );
+
+  // Deploy file contents to Cloud Run (Remote)
+  server.tool(
+    'deploy-file-contents',
+    `Deploy files to Cloud Run by providing their contents directly to the GCP project ${currentProject}.`,
+    {
+      region: z.string().optional().default(currentRegion).describe('Region to deploy the service to'),
+      service: z.string().optional().default('app').describe('Name of the Cloud Run service to deploy to'),
+      files: z.array(z.object({
+        filename: z.string().describe('Name and path of the file (e.g. "src/index.js" or "data/config.json")'),
+        content: z.string().describe('Text content of the file'),
+      })).describe('Array of file objects containing filename and content'),
+    },
+    async ({ region, service, files }) => {
+      console.log(`New deploy request (remote): ${JSON.stringify({ project: currentProject, region, service, files })}`);
+
+      if (typeof files !== 'object' || !Array.isArray(files) || files.length === 0) {
+        throw new Error('Files must be specified');
+      }
+
+      // Validate that each file has content
+      for (const file of files) {
+        if (!file.content) {
+          throw new Error(`File ${file.filename} must have content`);
+        }
+      }
+
+      // Deploy to Cloud Run
+      try {
+        const response = await deploy({
+          projectId: currentProject,
+          serviceName: service,
+          region: region,
+          files: files,
+        });
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Cloud Run service ${service} deployed in project ${currentProject}\nCloud Console: https://console.cloud.google.com/run/detail/${region}/${service}?project=${currentProject}\nService URL: ${response.uri}`,
+            }
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Error deploying to Cloud Run: ${error}`,
+            }
+          ],
+        };
+      }
+  });
 };
