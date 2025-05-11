@@ -1,5 +1,6 @@
 # TODO
 
+- [ ] Allow configuring transports
 - [ ] Do not start local file deploy when running in GCP
 - [ ] When running in GCP, use current project, do not accept other projects.
 - [ ] Add intermediate progress (Work in progress, see `notifications` branch)
