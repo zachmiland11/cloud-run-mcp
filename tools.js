@@ -16,7 +16,7 @@ limitations under the License.
 
 import { z } from "zod";
 import { deploy } from './lib/cloud-run-deploy.js';
-import { listServices, getService } from './lib/cloud-run-get.js';
+import { listServices, getService } from './lib/cloud-run-services.js';
 import { listProjects, createProjectAndAttachBilling } from './lib/gcp-projects.js';
 import { checkGCP } from './lib/gcp-metadata.js';
 
