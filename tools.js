@@ -17,7 +17,7 @@ limitations under the License.
 import { z } from "zod";
 import { deploy } from './lib/cloud-run-deploy.js';
 import { listServices, getService } from './lib/cloud-run-get.js';
-import { listProjects } from './lib/gcp-projects.js';
+import { listProjects, createProjectAndAttachBilling } from './lib/gcp-projects.js';
 import { checkGCP } from './lib/gcp-metadata.js';
 
 export const registerTools = (server) => {
@@ -39,6 +39,41 @@ export const registerTools = (server) => {
           content: [{
             type: 'text',
             text: `Error listing GCP projects: ${error.message}`
+          }]
+        };
+      }
+    }
+  );
+
+  // Tool to create a new GCP project
+  server.tool(
+    "create-project",
+    "Creates a new GCP project and attempts to attach it to the first available billing account. A project ID can be optionally specified; otherwise it will be automatically generated.",
+    {
+      projectId: z.string().optional().describe("Optional. The desired ID for the new GCP project. If not provided, an ID will be auto-generated."),
+    },
+    async ({ projectId }) => {
+      if (projectId !== undefined && (typeof projectId !== 'string' || projectId.trim() === '')) {
+        return {
+          content: [{
+            type: 'text',
+            text: "Error: If provided, Project ID must be a non-empty string."
+          }]
+        };
+      }
+      try {
+        const result = await createProjectAndAttachBilling(projectId);
+        return {
+          content: [{
+            type: 'text',
+            text: `Successfully created GCP project with ID "${newProjectId}". You can now use this project ID for deployments.`
+          }]
+        };
+      } catch (error) {
+        return {
+          content: [{
+            type: 'text',
+            text: `Error creating GCP project or attaching billing: ${error.message}`
           }]
         };
       }

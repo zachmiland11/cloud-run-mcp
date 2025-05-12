@@ -30,28 +30,27 @@ async function getProjectId() {
 
   if (!projectIdInput) {
     const rl = readline.createInterface({ input, output });
-    projectIdInput = await rl.question('Please enter your Google Cloud project ID (or type "new" to create one): ');
+    projectIdInput = await rl.question('Please enter your Google Cloud project ID: ');
     rl.close();
   }
 
-  if (projectIdInput && projectIdInput.toLowerCase() === 'new') {
-    console.log('Project ID set to "new". A new project will be created.');
-    return undefined;
+  if (!projectIdInput || projectIdInput.trim() === '') {
+    console.error('No project ID provided. Exiting.');
+    process.exit(1);
   }
-
-  if (!projectIdInput) {
-    console.error('No project ID provided and not "new". Exiting.');
+  if (projectIdInput.toLowerCase() === 'new') {
+    console.error('Project creation ("new") is now handled by test-create-project.js. Please provide an existing project ID. Exiting.');
     process.exit(1);
   }
   console.log(`Using Project ID: ${projectIdInput}`);
   return projectIdInput;
 }
 
-const projectId = await getProjectId();
+const projectIdToUse = await getProjectId();
 
 // Configuration for Go deployment with Dockerfile
 const configGoWithDockerfile = {
-  projectId: projectId, // Use the obtained project ID
+  projectId: projectIdToUse, // Use the obtained project ID
   serviceName: 'example-go-app-docker', // Name of the Cloud Run service
   region: 'europe-west1', // Google Cloud region
   files: [
@@ -63,7 +62,7 @@ const configGoWithDockerfile = {
 
 // Configuration for Go deployment without Dockerfile (using buildpacks)
 const configGoWithoutDockerfile = {
-  projectId: projectId,
+  projectId: projectIdToUse,
   serviceName: 'example-go-app-buildpack',
   region: 'europe-west1',
   files: [
@@ -75,7 +74,7 @@ const configGoWithoutDockerfile = {
 
 // Configuration for Go deployment with file content (using buildpacks)
 const configGoWithContent = {
-  projectId: projectId,
+  projectId: projectIdToUse,
   serviceName: 'example-go-app-content',
   region: 'europe-west1',
   files: [] // To be populated with file content

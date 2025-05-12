@@ -32,10 +32,24 @@ use GitHub pull requests for this purpose. Consult
 [GitHub Help](https://help.github.com/articles/about-pull-requests/) for more
 information on using pull requests.
 
-### To test a simple deployment (not using MCP)
+### Testing
+
+#### To test creating a new project (not using MCP)
+
+See the `test/test-create-project.js` script. Run it with:
+
+```bash
+npm run test:create-project
+```
+
+This script will guide you through creating a new Google Cloud project and attempting to link it to a billing account. You can optionally provide a desired project ID.
+
+#### To test a simple deployment (not using MCP)
 
 See the `test/test-deploy.js` script. Run it with:
 
 ```bash
 npm run test:deploy
 ```
+
+This script requires an existing Google Cloud Project ID to be provided when prompted or as a command-line argument.
