@@ -10,3 +10,4 @@
 - [ ] When running as remote, add an option to use some kind of simple `KEY` header.
 - [ ] Push to npm
 - [ ] Push public image and document how to run via Docker
+- [ ] Do a dry run when deploying Cloud Run service and if invoker_iam_disabled is not allowed, deploy without it.
