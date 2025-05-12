@@ -19,10 +19,32 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 // Support SSE for backward compatibility
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+// Support stdio, as it is easier to use locally
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { registerTools, registerToolsRemote } from './tools.js';
 import { checkGCP } from './lib/gcp-metadata.js';
 
 const gcpInfo = await checkGCP();
+
+/**
+ * Ensure that console.log and console.error are compatible with stdio.
+ * (Right now, it just disables them)
+ */
+function makeLoggingCompatibleWithStdio() {
+  console.log = () => {};
+  console.error = () => {};
+}
+
+function shouldStartStdio() {
+  if (gcpInfo && gcpInfo.project) {
+    return false;
+  }
+  return true;
+}
+
+if(shouldStartStdio()) {
+  makeLoggingCompatibleWithStdio();
+};
 
 async function getServer () {
   // Create an MCP server with implementation details
@@ -127,6 +149,16 @@ app.post('/messages', async (req, res) => {
     res.status(400).send('No transport found for sessionId');
   }
 });
+
+// stdio
+if (shouldStartStdio()) {
+  const stdioTransport = new StdioServerTransport();
+  const server = await getServer();
+  await server.connect(stdioTransport);
+  console.log('Cloud Run MCP server stdio transport connected');
+} else {
+  console.log('Running on GCP, stdio transport will not be started.');
+}
 
 // Start the server
 const PORT = process.env.PORT || 3000;
