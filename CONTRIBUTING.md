@@ -32,9 +32,51 @@ use GitHub pull requests for this purpose. Consult
 [GitHub Help](https://help.github.com/articles/about-pull-requests/) for more
 information on using pull requests.
 
-### Testing
+## Development
 
-#### To test creating a new project (not using MCP)
+To use local stdio MCP server. In your MCP client configuration, use the following:
+
+```json 
+{
+  "mcpServers": {
+    "cloud-run": {
+      "command": "node",
+      "args": [
+        "/path/to/this/repo/cloud-run-mcp/mcp-server.js"
+      ]
+    }
+  }
+}
+```
+
+To use remote MCP Server:
+
+Start the MCP server locally with:
+
+```bash
+npm run start
+```
+
+Then, in your MCP client configuration, use the following:
+
+```json 
+{
+  "mcpServers": {
+    "cloud-run": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "http://localhost:3000/sse"
+      ]
+    }
+  }
+}
+```
+
+
+## Testing
+
+### To test creating a new project (not using MCP)
 
 See the `test/test-create-project.js` script. Run it with:
 
@@ -44,7 +86,7 @@ npm run test:create-project
 
 This script will guide you through creating a new Google Cloud project and attempting to link it to a billing account. You can optionally provide a desired project ID.
 
-#### To test a simple deployment (not using MCP)
+### To test a simple deployment (not using MCP)
 
 See the `test/test-deploy.js` script. Run it with:
 
