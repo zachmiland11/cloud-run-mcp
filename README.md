@@ -45,7 +45,10 @@ Run the Cloud Run MCP server on your local machine using local Google Cloud cred
 
 ## Use as remote MCP server
 
-Run the Cloud Run MCP server itself on Cloud Run. This is best if you are using a cloud-based AI application. 
+> [!WARNING]  
+> Do not use the remote MCP server without authentication. In the following instructions, we will use IAM authentication to secure the connection to the MCP server from your local machine. This is important to prevent unauthorized access to your Google Cloud resources.
+
+Run the Cloud Run MCP server itself on Cloud Run with connection from your local machine authenticated via IAM.
 With this option, you will only be able to deploy code to the same Google Cloud project as where the MCP server is running.
 
 1. Install the [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) and authenticate with your Google account.
