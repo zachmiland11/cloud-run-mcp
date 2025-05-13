@@ -33,8 +33,8 @@ const gcpInfo = await checkGCP();
  * (Right now, it just disables them)
  */
 function makeLoggingCompatibleWithStdio() {
-  console.log = () => {};
-  console.error = () => {};
+  // redirect all console.log (which usually go to to stdout) to stderr.
+  console.log = console.error;
 }
 
 function shouldStartStdio() {
