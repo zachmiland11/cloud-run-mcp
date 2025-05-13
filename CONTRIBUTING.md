@@ -34,6 +34,22 @@ information on using pull requests.
 
 ## Development
 
+```bash
+npm install
+```
+
+### Using MCP inspector
+
+Load MCP Inspector in your browser:
+
+```bash
+npm run test:mcp
+```
+
+Open http://localhost:6274/
+
+### Using a real MCP client
+
 To use local stdio MCP server. In your MCP client configuration, use the following:
 
 ```json 
@@ -49,7 +65,7 @@ To use local stdio MCP server. In your MCP client configuration, use the followi
 }
 ```
 
-To use remote MCP Server:
+To use remote MCP Server in a MCP client:
 
 Start the MCP server locally with:
 
