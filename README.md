@@ -18,10 +18,7 @@ _\* only available when running locally_
 
 ## Use as local MCP server
 
-> [!NOTE]  
-> These instructions will change when the MCP server is made public and container image or npm module is available.
-
-_The Cloud Run MCP server doesn't support the stdio transport, only HTTP transport._
+Run the Cloud Run MCP server on your local machine using local Google Cloud credentials. This is best if you are using an AI-assisted IDE (e.g. Cursor) or a desktop AI application (e.g. Claude).
 
 0. Install [Node.js](https://nodejs.org/en/download/) (LTS version recommended).
 
@@ -31,24 +28,7 @@ _The Cloud Run MCP server doesn't support the stdio transport, only HTTP transpo
    ```bash
    gcloud auth application-default login
    ```
-3. Start local MCP server:
-   ```bash
-   npm start
-   ```
-
 4. Update the MCP configuration file of your MCP client with the following:
-
-   ```json 
-    {
-      "mcpServers": {
-        "cloud-run": {
-          "url": "http://localhost:3000/sse"
-        }
-      }
-    }
-   ```
-
-   If your MCP client does not support the `url` attribute, you can use [mcp-remote](https://www.npmjs.com/package/mcp-remote):
 
    ```json 
     {
@@ -56,8 +36,7 @@ _The Cloud Run MCP server doesn't support the stdio transport, only HTTP transpo
         "cloud-run": {
           "command": "npx",
           "args": [
-            "mcp-remote",
-            "http://localhost:3000/sse"
+            "https://github.com/GoogleCloudPlatform/cloud-run-mcp"
           ]
         }
       }
@@ -66,7 +45,8 @@ _The Cloud Run MCP server doesn't support the stdio transport, only HTTP transpo
 
 ## Use as remote MCP server
 
-If the Cloud Run MCP server is itself deployed on Cloud Run, only deploying to the same project is supporte, and only the `deploy-file-contents` tool is available.
+Run the Cloud Run MCP server itself on Cloud Run. This is best if you are using a cloud-based AI application. 
+With this option, you will only be able to deploy code to the same Google Cloud project as where the MCP server is running.
 
 1. Install the [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) and authenticate with your Google account.
 
@@ -76,7 +56,7 @@ If the Cloud Run MCP server is itself deployed on Cloud Run, only deploying to t
    ```
 3. Deploy the Cloud Run MCP server to Cloud Run:
    ```bash
-   gcloud run deploy cloud-run-mcp --source . --no-allow-unauthenticated
+   gcloud run deploy cloud-run-mcp --image us-docker.pkg.dev/cloudrun/container/mcp --no-allow-unauthenticated
    ```
    When prompted, pick a region, for example `europe-west1`.
 
@@ -88,7 +68,7 @@ If the Cloud Run MCP server is itself deployed on Cloud Run, only deploying to t
    ```
    This will create a local proxy on port 8080 that forwards requests to the remote MCP server and injects your identity.
 
-5. Update the MCP configuration file of your MCP client with the following, replace the URL with the URL of the deployed sevice:
+5. Update the MCP configuration file of your MCP client with the following, replace the URL with the URL of the deployed service:
 
    ```json 
     {
