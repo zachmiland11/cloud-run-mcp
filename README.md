@@ -72,7 +72,7 @@ With this option, you will only be able to deploy code to the same Google Cloud 
    ```
    This will create a local proxy on port 8080 that forwards requests to the remote MCP server and injects your identity.
 
-5. Update the MCP configuration file of your MCP client with the following, replace the URL with the URL of the deployed service:
+5. Update the MCP configuration file of your MCP client with the following:
 
    ```json 
     {
