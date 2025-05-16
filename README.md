@@ -2,11 +2,11 @@
 
 Deploy code to Cloud Run from MCP-clients:
 
-AI assistant apps: 
+AI-powered IDEs:
 
 <img src="https://github.com/user-attachments/assets/9fdcec30-2b38-4362-9eb1-54cab09e99d4" width="600">
 
-AI-powered IDEs:
+AI assistant apps: 
 
 <img src="https://github.com/user-attachments/assets/b10f0335-b332-4640-af38-ea015b46b57c" width="600">
 
