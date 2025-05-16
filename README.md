@@ -12,9 +12,13 @@ An MCP server to deploy code to Google Cloud Run.
 - `list-projects`*: Lists available GCP projects.
 - `create-project`*: Creates a new GCP project and attach it to the first available billing account. A project ID can be optionally specified.
 
-
 _\* only available when running locally_
 
+## Demos
+
+<img src="https://github.com/user-attachments/assets/9fdcec30-2b38-4362-9eb1-54cab09e99d4" width="600">
+
+<img src="https://github.com/user-attachments/assets/b10f0335-b332-4640-af38-ea015b46b57c" width="600">
 
 ## Use as local MCP server
 
