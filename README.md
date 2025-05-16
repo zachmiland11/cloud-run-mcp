@@ -24,7 +24,12 @@ Run the Cloud Run MCP server on your local machine using local Google Cloud cred
 
 1. Install the [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) and authenticate with your Google account.
 
-2. Set up application credentials using the command:
+2. Log in to your Google Cloud account using the command:
+   ```bash
+   gcloud auth login
+   ```
+
+3. Set up application credentials using the command:
    ```bash
    gcloud auth application-default login
    ```
@@ -49,11 +54,16 @@ With this option, you will only be able to deploy code to the same Google Cloud 
 
 1. Install the [Google Cloud SDK](https://cloud.google.com/sdk/docs/install) and authenticate with your Google account.
 
-2. Set your Google Cloud project ID using the command:
+2. Log in to your Google Cloud account using the command:
+   ```bash
+   gcloud auth login
+   ```
+
+3. Set your Google Cloud project ID using the command:
    ```bash
    gcloud config set project YOUR_PROJECT_ID
    ```
-3. Deploy the Cloud Run MCP server to Cloud Run:
+4. Deploy the Cloud Run MCP server to Cloud Run:
    ```bash
    gcloud run deploy cloud-run-mcp --image us-docker.pkg.dev/cloudrun/container/mcp --no-allow-unauthenticated
    ```
@@ -61,13 +71,13 @@ With this option, you will only be able to deploy code to the same Google Cloud 
 
    Note that the MCP server is *not* publicly accessible, it requires authentication via IAM.
 
-3. Run a Cloud Run proxy on your local machine to connect securely using your identity to the remote MCP server running on Cloud Run:
+5. Run a Cloud Run proxy on your local machine to connect securely using your identity to the remote MCP server running on Cloud Run:
    ```bash
    gcloud run services proxy cloud-run-mcp --port=3000 --region=REGION --project=PROJECT_ID
    ```
    This will create a local proxy on port 3000 that forwards requests to the remote MCP server and injects your identity.
 
-5. Update the MCP configuration file of your MCP client with the following:
+6. Update the MCP configuration file of your MCP client with the following:
 
    ```json 
     {
