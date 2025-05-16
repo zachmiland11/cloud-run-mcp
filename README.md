@@ -1,5 +1,17 @@
 # MCP server to deploy code to Google Cloud Run
 
+Deploy code to Cloud Run from MCP-clients:
+
+AI assistant apps: 
+
+<img src="https://github.com/user-attachments/assets/9fdcec30-2b38-4362-9eb1-54cab09e99d4" width="600">
+
+AI-powered IDEs:
+
+<img src="https://github.com/user-attachments/assets/b10f0335-b332-4640-af38-ea015b46b57c" width="600">
+
+Agent SDKs, like the [Google Gen AI SDK](https://ai.google.dev/gemini-api/docs/function-calling?example=meeting#use_model_context_protocol_mcp) or [Agent Development Kit](https://google.github.io/adk-docs/tools/mcp-tools/). 
+
 ## Tools
 
 - `deploy-file-contents`: Deploys files to Cloud Run by providing their contents directly.
@@ -11,12 +23,6 @@
 - `create-project`*: Creates a new GCP project and attach it to the first available billing account. A project ID can be optionally specified.
 
 _\* only available when running locally_
-
-## Demos
-
-<img src="https://github.com/user-attachments/assets/9fdcec30-2b38-4362-9eb1-54cab09e99d4" width="600">
-
-<img src="https://github.com/user-attachments/assets/b10f0335-b332-4640-af38-ea015b46b57c" width="600">
 
 ## Use as local MCP server
 
