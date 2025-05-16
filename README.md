@@ -32,14 +32,9 @@ Run the Cloud Run MCP server on your local machine using local Google Cloud cred
 
    ```json 
     {
-      "mcpServers": {
-        "cloud-run": {
-          "command": "npx",
-          "args": [
-            "-y",
-            "https://github.com/GoogleCloudPlatform/cloud-run-mcp"
-          ]
-        }
+      "cloud-run": {
+        "command": "npx",
+        "args": ["-y", "https://github.com/GoogleCloudPlatform/cloud-run-mcp"]
       }
     }
    ```
@@ -76,10 +71,8 @@ With this option, you will only be able to deploy code to the same Google Cloud 
 
    ```json 
     {
-      "mcpServers": {
-        "cloud-run": {
-          "url": "http://localhost:3000/sse"
-        }
+      "cloud-run": {
+        "url": "http://localhost:3000/sse"
       }
     }
    ```
@@ -87,15 +80,9 @@ With this option, you will only be able to deploy code to the same Google Cloud 
 
    ```json 
     {
-      "mcpServers": {
-        "cloud-run": {
-          "command": "npx",
-          "args": [
-            "-y",
-            "mcp-remote",
-            "http://localhost:3000/sse"
-          ]
-        }
+      "cloud-run": {
+        "command": "npx",
+        "args": ["-y", "mcp-remote", "http://localhost:3000/sse"]
       }
     }
    ```
