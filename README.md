@@ -1,16 +1,16 @@
 # MCP server to deploy code to Google Cloud Run
 
-Deploy code to Cloud Run from MCP-clients:
+Enable MCP-compatible AI agents to deploy apps to Cloud Run.
 
-AI-powered IDEs:
+From AI-powered IDEs:
 
 <img src="https://github.com/user-attachments/assets/9fdcec30-2b38-4362-9eb1-54cab09e99d4" width="600">
 
-AI assistant apps: 
+From AI assistant apps: 
 
 <img src="https://github.com/user-attachments/assets/b10f0335-b332-4640-af38-ea015b46b57c" width="600">
 
-Agent SDKs, like the [Google Gen AI SDK](https://ai.google.dev/gemini-api/docs/function-calling?example=meeting#use_model_context_protocol_mcp) or [Agent Development Kit](https://google.github.io/adk-docs/tools/mcp-tools/). 
+From agent SDKs, like the [Google Gen AI SDK](https://ai.google.dev/gemini-api/docs/function-calling?example=meeting#use_model_context_protocol_mcp) or [Agent Development Kit](https://google.github.io/adk-docs/tools/mcp-tools/). 
 
 ## Tools
 
