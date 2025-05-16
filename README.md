@@ -68,9 +68,9 @@ With this option, you will only be able to deploy code to the same Google Cloud 
 
 3. Run a Cloud Run proxy on your local machine to connect securely using your identity to the remote MCP server running on Cloud Run:
    ```bash
-   gcloud run services proxy cloud-run-mcp
+   gcloud run services proxy cloud-run-mcp --port=3000 --region=REGION --project=PROJECT_ID
    ```
-   This will create a local proxy on port 8080 that forwards requests to the remote MCP server and injects your identity.
+   This will create a local proxy on port 3000 that forwards requests to the remote MCP server and injects your identity.
 
 5. Update the MCP configuration file of your MCP client with the following:
 
@@ -78,7 +78,7 @@ With this option, you will only be able to deploy code to the same Google Cloud 
     {
       "mcpServers": {
         "cloud-run": {
-          "url": "http://localhost:8080/sse"
+          "url": "http://localhost:3000/sse"
         }
       }
     }
@@ -93,7 +93,7 @@ With this option, you will only be able to deploy code to the same Google Cloud 
           "args": [
             "-y",
             "mcp-remote",
-            "http://localhost:8080/sse"
+            "http://localhost:3000/sse"
           ]
         }
       }
