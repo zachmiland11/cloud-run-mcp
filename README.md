@@ -1,6 +1,4 @@
-# Cloud Run MCP server
-
-An MCP server to deploy code to Google Cloud Run.
+# MCP server to deploy code to Google Cloud Run
 
 ## Tools
 
