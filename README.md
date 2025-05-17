@@ -2,6 +2,17 @@
 
 Enable MCP-compatible AI agents to deploy apps to Cloud Run.
 
+Install with:
+
+```json
+"mcpServers":{
+  "cloud-run": {
+    "command": "npx",
+    "args": ["-y", "https://github.com/GoogleCloudPlatform/cloud-run-mcp"]
+  }
+}
+```
+
 From AI-powered IDEs:
 
 <img src="https://github.com/user-attachments/assets/9fdcec30-2b38-4362-9eb1-54cab09e99d4" width="800">
@@ -44,12 +55,10 @@ Run the Cloud Run MCP server on your local machine using local Google Cloud cred
 4. Update the MCP configuration file of your MCP client with the following:
 
    ```json 
-    {
       "cloud-run": {
         "command": "npx",
         "args": ["-y", "https://github.com/GoogleCloudPlatform/cloud-run-mcp"]
       }
-    }
    ```
 
 ## Use as remote MCP server
@@ -88,19 +97,16 @@ With this option, you will only be able to deploy code to the same Google Cloud 
 6. Update the MCP configuration file of your MCP client with the following:
 
    ```json 
-    {
       "cloud-run": {
         "url": "http://localhost:3000/sse"
       }
-    }
+
    ```
    If your MCP client does not support the `url` attribute, you can use [mcp-remote](https://www.npmjs.com/package/mcp-remote):
 
    ```json 
-    {
       "cloud-run": {
         "command": "npx",
         "args": ["-y", "mcp-remote", "http://localhost:3000/sse"]
       }
-    }
    ```
