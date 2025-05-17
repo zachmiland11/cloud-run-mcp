@@ -95,10 +95,14 @@ export const registerTools = (server) => {
 
       try {
         const services = await listServices(project, region);
+        const serviceList = services.map(s => {
+          const serviceName = s.name.split('/').pop();
+          return `- ${serviceName} (URL: ${s.uri})`;
+        }).join('\n');
         return {
           content: [{
             type: 'text',
-            text: `Services in project ${project} (location ${region}):\n${services.map(s => `- ${s.name} (URL: ${s.uri})`).join('\n')}`
+            text: `Services in project ${project} (location ${region}):\n${serviceList}`
           }]
         };
       } catch (error) {
@@ -329,10 +333,14 @@ export const registerToolsRemote = async (server) => {
     async ({ region }) => {
       try {
         const services = await listServices(currentProject, region);
+        const serviceList = services.map(s => {
+          const serviceName = s.name.split('/').pop();
+          return `- ${serviceName} (URL: ${s.uri})`;
+        }).join('\n');
         return {
           content: [{
             type: 'text',
-            text: `Services in project ${currentProject} (location ${region}):\n${services.map(s => `- ${s.name} (URL: ${s.uri})`).join('\n')}`
+            text: `Services in project ${currentProject} (location ${region}):\n${serviceList}`
           }]
         };
       } catch (error) {
