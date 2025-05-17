@@ -23,7 +23,7 @@ import { checkGCP } from './lib/gcp-metadata.js';
 export const registerTools = (server) => {
   // Tool to list GCP projects
   server.tool(
-    "list-projects",
+    "list_projects",
     "Lists available GCP projects",
     async () => {
       try {
@@ -47,7 +47,7 @@ export const registerTools = (server) => {
 
   // Tool to create a new GCP project
   server.tool(
-    "create-project",
+    "create_project",
     "Creates a new GCP project and attempts to attach it to the first available billing account. A project ID can be optionally specified; otherwise it will be automatically generated.",
     {
       projectId: z.string().optional().describe("Optional. The desired ID for the new GCP project. If not provided, an ID will be auto-generated."),
@@ -82,7 +82,7 @@ export const registerTools = (server) => {
 
   // Listing Cloud Run services
   server.tool(
-    "list-services",
+    "list_services",
     "Lists Cloud Run services in a given project and region.",
     {
       project: z.string().describe("Google Cloud project ID"),
@@ -118,7 +118,7 @@ export const registerTools = (server) => {
 
   // Dynamic resource for getting a specific service
   server.tool(
-    "get-service",
+    "get_service",
     "Gets details for a specific Cloud Run service.",
     {
       project: z.string().describe("Google Cloud project ID containing the service"),
@@ -161,7 +161,7 @@ export const registerTools = (server) => {
   );
 
   server.tool(
-    'deploy-local-files',
+    'deploy_local_files',
     'Deploy local files to Cloud Run. Takes an array of absolute file paths from the local filesystem that will be deployed. Use this tool if the files exists on the user local filesystem.',
     {
       project: z.string().describe('Google Cloud project ID. Do not select it yourself, make sure the user provides or confirms the project ID.'),
@@ -211,7 +211,7 @@ export const registerTools = (server) => {
 
 
   server.tool(
-    'deploy-local-folder',
+    'deploy_local_folder',
     'Deploy a local folder to Cloud Run. Takes an absolute folder path from the local filesystem that will be deployed. Use this tool if the entire folder content needs to be deployed.',
     {
       project: z.string().describe('Google Cloud project ID. Do not select it yourself, make sure the user provides or confirms the project ID.'),
@@ -257,7 +257,7 @@ export const registerTools = (server) => {
   );
 
   server.tool(
-    'deploy-file-contents',
+    'deploy_file_contents',
     'Deploy files to Cloud Run by providing their contents directly. Takes an array of file objects containing filename and content. Use this tool if the files only exist in the current chat context.',
     {
       project: z.string().describe('Google Cloud project ID. Leave unset for the app to be deployed in a new project. If provided, make sure the user confirms the project ID they want to deploy to.'),
@@ -325,7 +325,7 @@ export const registerToolsRemote = async (server) => {
 
   // Listing Cloud Run services (Remote)
   server.tool(
-    "list-services",
+    "list_services",
     `Lists Cloud Run services in GCP project ${currentProject} and a given region.`,
     {
       region: z.string().describe("Region where the services are located").default(currentRegion),
@@ -356,7 +356,7 @@ export const registerToolsRemote = async (server) => {
 
   // Dynamic resource for getting a specific service (Remote)
   server.tool(
-    "get-service",
+    "get_service",
     `Gets details for a specific Cloud Run service in GCP project ${currentProject}.`,
     {
       region: z.string().describe("Region where the service is located").default(currentRegion),
@@ -396,7 +396,7 @@ export const registerToolsRemote = async (server) => {
 
   // Deploy file contents to Cloud Run (Remote)
   server.tool(
-    'deploy-file-contents',
+    'deploy_file_contents',
     `Deploy files to Cloud Run by providing their contents directly to the GCP project ${currentProject}.`,
     {
       region: z.string().optional().default(currentRegion).describe('Region to deploy the service to'),
