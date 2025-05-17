@@ -202,7 +202,7 @@ export const registerTools = (server) => {
           content: [
             {
               type: 'text',
-              text: `Error deploying to Cloud Run: ${error}`,
+              text: `Error deploying to Cloud Run: ${error.message || error}`,
             }
           ],
         };
@@ -248,7 +248,7 @@ export const registerTools = (server) => {
           content: [
             {
               type: 'text',
-              text: `Error deploying folder to Cloud Run: ${error}`,
+              text: `Error deploying folder to Cloud Run: ${error.message || error}`,
             }
           ],
         };
@@ -307,7 +307,7 @@ export const registerTools = (server) => {
           content: [
             {
               type: 'text',
-              text: `Error deploying to Cloud Run: ${error}`,
+              text: `Error deploying to Cloud Run: ${error.message || error}`,
             }
           ],
         };
@@ -441,7 +441,7 @@ export const registerToolsRemote = async (server) => {
           content: [
             {
               type: 'text',
-              text: `Error deploying to Cloud Run: ${error}`,
+              text: `Error deploying to Cloud Run: ${error.message || error}`,
             }
           ],
         };
