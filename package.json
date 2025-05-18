@@ -14,7 +14,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/steren/cloud-run-mcp.git"
+    "url": "git+https://github.com/GoogleCloudPlatform/cloud-run-mcp.git"
   },
   "keywords": [
     "mcp",
@@ -24,9 +24,9 @@
   "author": "steren@google.com",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/steren/cloud-run-mcp/issues"
+    "url": "https://github.com/GoogleCloudPlatform/cloud-run-mcp/issues"
   },
-  "homepage": "https://github.com/steren/cloud-run-mcp#readme",
+  "homepage": "https://github.com/GoogleCloudPlatform/cloud-run-mcp#readme",
   "dependencies": {
     "@google-cloud/artifact-registry": "^4.0.1",
     "@google-cloud/billing": "^5.0.1",
