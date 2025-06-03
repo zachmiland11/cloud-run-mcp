@@ -171,15 +171,28 @@ export const registerTools = (server) => {
       service: z.string().describe("Name of the Cloud Run service"),
     },
     async ({ project, region, service }) => {
+      let allLogs = [];
+      let requestOptions;
       try {
-        console.log("teste")
-        const logs = await getServiceLogs(project, region, service);
-        return {
-          content: [{
-            type: 'text',
-            text: logs
-          }]
-        };
+        do {
+          // Fetch a page of logs
+          const response = await getServiceLogs(project, region, service, requestOptions);
+          
+          if (response.logs) {
+            allLogs.push(response.logs);
+          }
+          
+          // Set the requestOptions incl pagintion token for the next iteration
+
+          requestOptions = response.requestOptions;
+
+        } while (requestOptions); // Continue as long as there is a next page token
+          return {
+            content: [{
+              type: 'text',
+              text: allLogs.join('\n')
+            }]
+          };
       } catch (error) {
         return {
           content: [{
@@ -425,7 +438,7 @@ export const registerToolsRemote = async (server) => {
     }
   );
 
-  // Logs for a service
+// Logs for a service
   server.tool(
     "get_service_log",
     "Gets Logs and Error Messages for a specific Cloud Run service.",
@@ -435,15 +448,28 @@ export const registerToolsRemote = async (server) => {
       service: z.string().describe("Name of the Cloud Run service"),
     },
     async ({ project, region, service }) => {
+      let allLogs = [];
+      let requestOptions;
       try {
-        console.log("teste")
-        const logs = await getServiceLogs(project, region, service);
-        return {
-          content: [{
-            type: 'text',
-            text: logs
-          }]
-        };
+        do {
+          // Fetch a page of logs
+          const response = await getServiceLogs(project, region, service, requestOptions);
+          
+          if (response.logs) {
+            allLogs.push(response.logs);
+          }
+          
+          // Set the requestOptions incl pagintion token for the next iteration
+
+          requestOptions = response.requestOptions;
+
+        } while (requestOptions); // Continue as long as there is a next page token
+          return {
+            content: [{
+              type: 'text',
+              text: allLogs.join('\n')
+            }]
+          };
       } catch (error) {
         return {
           content: [{
