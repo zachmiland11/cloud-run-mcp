@@ -10,6 +10,7 @@
     "test:mcp": "npx @modelcontextprotocol/inspector node mcp-server.js",
     "test:deploy": "node test/test-deploy.js",
     "test:create-project": "node test/test-create-project.js",
+    "test:service-logs": "node test/test-service-logs.js",
     "start": "node mcp-server.js"
   },
   "repository": {
