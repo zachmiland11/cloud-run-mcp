@@ -80,8 +80,28 @@ const configGoWithContent = {
   files: [] // To be populated with file content
 };
 
+// Configuration for a deployment that is expected to fail
+const configFailingBuild = {
+  projectId: projectIdToUse,
+  serviceName: 'example-failing-app',
+  region: 'europe-west1',
+  files: [
+    { filename: 'main.txt', content: 'This is not a valid application source file and should cause a build failure.' }
+  ]
+};
+
 
 try {
+  console.log("\\n--- Testing intentionally failing build ---");
+  try {
+    await deploy(configFailingBuild);
+    // If deploy doesn't throw an error, then the test has failed because it was expected to fail.
+    console.error("Deployment test failed: The build with invalid files succeeded when it was expected to fail.");
+    process.exit(1);
+  } catch (error) {
+    console.log("Intentionally failing build test completed as expected.");
+  }
+
   console.log("--- Testing Go deployment with Dockerfile ---");
   await deploy(configGoWithDockerfile);
   console.log("--- Go deployment with Dockerfile test completed ---");
@@ -101,6 +121,6 @@ try {
   console.log("--- Go deployment with file content (Buildpacks) test completed ---");
 
 } catch (error) {
-  console.error("Deployment test failed:", error);
+  console.error("An unexpected error occurred in the test script:", error);
   process.exit(1);
 }
