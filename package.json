@@ -10,6 +10,7 @@
     "test:mcp": "npx @modelcontextprotocol/inspector node mcp-server.js",
     "test:deploy": "node test/test-deploy.js",
     "test:create-project": "node test/test-create-project.js",
+    "test:service-logs": "node test/test-service-logs.js",
     "start": "node mcp-server.js"
   },
   "repository": {
@@ -31,6 +32,7 @@
     "@google-cloud/artifact-registry": "^4.0.1",
     "@google-cloud/billing": "^5.0.1",
     "@google-cloud/cloudbuild": "^5.0.1",
+    "@google-cloud/logging": "^11.2.0",
     "@google-cloud/resource-manager": "^6.0.1",
     "@google-cloud/run": "^2.0.1",
     "@google-cloud/service-usage": "^4.1.0",
@@ -38,6 +40,7 @@
     "@modelcontextprotocol/sdk": "^1.11.0",
     "archiver": "^7.0.1",
     "express": "^5.1.0",
+    "google-proto-files": "^4.2.0",
     "zod": "^3.24.4"
   }
 }

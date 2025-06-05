@@ -16,9 +16,10 @@ limitations under the License.
 
 import { z } from "zod";
 import { deploy } from './lib/cloud-run-deploy.js';
-import { listServices, getService } from './lib/cloud-run-services.js';
+import { listServices, getService, getServiceLogs } from './lib/cloud-run-services.js';
 import { listProjects, createProjectAndAttachBilling } from './lib/gcp-projects.js';
 import { checkGCP } from './lib/gcp-metadata.js';
+import { ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 export const registerTools = (server) => {
   // Tool to list GCP projects
@@ -154,6 +155,49 @@ export const registerTools = (server) => {
           content: [{
             type: 'text',
             text: `Error getting service ${service} in project ${project} (region ${region}): ${error.message}`
+          }]
+        };
+      }
+    }
+  );
+
+  // Logs for a service
+  server.tool(
+    "get_service_log",
+    "Gets Logs and Error Messages for a specific Cloud Run service.",
+    {
+      project: z.string().describe("Google Cloud project ID containing the service"),
+      region: z.string().describe("Region where the service is located").default('europe-west1'),
+      service: z.string().describe("Name of the Cloud Run service"),
+    },
+    async ({ project, region, service }) => {
+      let allLogs = [];
+      let requestOptions;
+      try {
+        do {
+          // Fetch a page of logs
+          const response = await getServiceLogs(project, region, service, requestOptions);
+          
+          if (response.logs) {
+            allLogs.push(response.logs);
+          }
+          
+          // Set the requestOptions incl pagintion token for the next iteration
+
+          requestOptions = response.requestOptions;
+
+        } while (requestOptions); // Continue as long as there is a next page token
+          return {
+            content: [{
+              type: 'text',
+              text: allLogs.join('\n')
+            }]
+          };
+      } catch (error) {
+        return {
+          content: [{
+            type: 'text',
+            text: `Error getting Logs for service ${service} in project ${project} (region ${region}): ${error.message}`
           }]
         };
       }
@@ -394,6 +438,49 @@ export const registerToolsRemote = async (server) => {
     }
   );
 
+// Logs for a service
+  server.tool(
+    "get_service_log",
+    "Gets Logs and Error Messages for a specific Cloud Run service.",
+    {
+      project: z.string().describe("Google Cloud project ID containing the service"),
+      region: z.string().describe("Region where the service is located").default('europe-west1'),
+      service: z.string().describe("Name of the Cloud Run service"),
+    },
+    async ({ project, region, service }) => {
+      let allLogs = [];
+      let requestOptions;
+      try {
+        do {
+          // Fetch a page of logs
+          const response = await getServiceLogs(project, region, service, requestOptions);
+          
+          if (response.logs) {
+            allLogs.push(response.logs);
+          }
+          
+          // Set the requestOptions incl pagintion token for the next iteration
+
+          requestOptions = response.requestOptions;
+
+        } while (requestOptions); // Continue as long as there is a next page token
+          return {
+            content: [{
+              type: 'text',
+              text: allLogs.join('\n')
+            }]
+          };
+      } catch (error) {
+        return {
+          content: [{
+            type: 'text',
+            text: `Error getting Logs for service ${service} in project ${project} (region ${region}): ${error.message}`
+          }]
+        };
+      }
+    }
+  );
+
   // Deploy file contents to Cloud Run (Remote)
   server.tool(
     'deploy_file_contents',
@@ -446,5 +533,5 @@ export const registerToolsRemote = async (server) => {
           ],
         };
       }
-  });
+    });
 };
