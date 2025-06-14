@@ -38,7 +38,7 @@ function makeLoggingCompatibleWithStdio() {
 }
 
 function shouldStartStdio() {
-  if (gcpInfo && gcpInfo.project) {
+  if (!process.env.GCP_STDIO || (gcpInfo && gcpInfo.project)) {
     return false;
   }
   return true;
