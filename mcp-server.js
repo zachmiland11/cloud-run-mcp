@@ -58,12 +58,12 @@ async function getServer () {
     version: '1.0.0',
   }, { capabilities: { logging: {} } });
 
-  if (gcpInfo && gcpInfo.project) {
+  if (shouldStartStdio() || !(gcpInfo && gcpInfo.project)) {
+    console.log('Using tools optimized for local or stdio mode.');
+    await registerTools(server);
+  } else {
     console.log(`Running on GCP project: ${gcpInfo.project}, region: ${gcpInfo.region}. Using tools optimized for remote use.`);
     await registerToolsRemote(server);
-  } else {
-    console.log('Not running on GCP. Using tools optimized for local use.');
-    await registerTools(server);
   }
 
   return server;
