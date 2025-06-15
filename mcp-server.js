@@ -38,6 +38,9 @@ function makeLoggingCompatibleWithStdio() {
 }
 
 function shouldStartStdio() {
+  if(process.env.GCP_STDIO){
+    return true;
+  }
   if (gcpInfo && gcpInfo.project) {
     return false;
   }
@@ -55,102 +58,16 @@ async function getServer () {
     version: '1.0.0',
   }, { capabilities: { logging: {} } });
 
-  if (gcpInfo && gcpInfo.project) {
+  if (shouldStartStdio() || !(gcpInfo && gcpInfo.project)) {
+    console.log('Using tools optimized for local or stdio mode.');
+    await registerTools(server);
+  } else {
     console.log(`Running on GCP project: ${gcpInfo.project}, region: ${gcpInfo.region}. Using tools optimized for remote use.`);
     await registerToolsRemote(server);
-  } else {
-    console.log('Not running on GCP. Using tools optimized for local use.');
-    await registerTools(server);
   }
 
   return server;
 }
-
-const app = express();
-app.use(express.json());
-
-app.post('/mcp', async (req, res) => {
-  console.log('/mcp Received:', req.body);
-  const server = await getServer();
-  try {
-    const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: undefined,
-    });
-    await server.connect(transport);
-    await transport.handleRequest(req, res, req.body);
-    res.on('close', () => {
-      console.log('Request closed');
-      transport.close();
-      server.close();
-    });
-  } catch (error) {
-    console.error('Error handling MCP request:', error);
-    if (!res.headersSent) {
-      res.status(500).json({
-        jsonrpc: '2.0',
-        error: {
-          code: -32603,
-          message: 'Internal server error',
-        },
-        id: null,
-      });
-    }
-  }
-});
-
-app.get('/mcp', async (req, res) => {
-  console.log('Received GET MCP request');
-  res.writeHead(405).end(JSON.stringify({
-    jsonrpc: "2.0",
-    error: {
-      code: -32000,
-      message: "Method not allowed."
-    },
-    id: null
-  }));
-});
-
-app.delete('/mcp', async (req, res) => {
-  console.log('Received DELETE MCP request');
-  res.writeHead(405).end(JSON.stringify({
-    jsonrpc: "2.0",
-    error: {
-      code: -32000,
-      message: "Method not allowed."
-    },
-    id: null
-  }));
-});
-
-// Support SSE for baackward compatibility
-const sseTransports = {};
-
-// Legacy SSE endpoint for older clients
-app.get('/sse', async (req, res) => {
-  console.log('/sse Received:', req.body);
-  const server = await getServer();
-  // Create SSE transport for legacy clients
-  const transport = new SSEServerTransport('/messages', res);
-  sseTransports[transport.sessionId] = transport;
-  
-  res.on("close", () => {
-    delete sseTransports[transport.sessionId];
-  });
-  
-  await server.connect(transport);
-});
-
-// Legacy message endpoint for older clients
-app.post('/messages', async (req, res) => {
-  console.log('/messages Received:', req.body);
-  const sessionId = req.query.sessionId;
-  const transport = sseTransports[sessionId];
-  if (transport) {
-    await transport.handlePostMessage(req, res, req.body);
-  } else {
-    res.status(400).send('No transport found for sessionId');
-  }
-});
 
 // stdio
 if (shouldStartStdio()) {
@@ -160,13 +77,99 @@ if (shouldStartStdio()) {
   console.log('Cloud Run MCP server stdio transport connected');
 } else {
   console.log('Running on GCP, stdio transport will not be started.');
-}
 
-// Start the server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Cloud Run MCP server listening on port ${PORT}`);
-});
+  const app = express();
+  app.use(express.json());
+
+  app.post('/mcp', async (req, res) => {
+    console.log('/mcp Received:', req.body);
+    const server = await getServer();
+    try {
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
+      });
+      await server.connect(transport);
+      await transport.handleRequest(req, res, req.body);
+      res.on('close', () => {
+        console.log('Request closed');
+        transport.close();
+        server.close();
+      });
+    } catch (error) {
+      console.error('Error handling MCP request:', error);
+      if (!res.headersSent) {
+        res.status(500).json({
+          jsonrpc: '2.0',
+          error: {
+            code: -32603,
+            message: 'Internal server error',
+          },
+          id: null,
+        });
+      }
+    }
+  });
+
+  app.get('/mcp', async (req, res) => {
+    console.log('Received GET MCP request');
+    res.writeHead(405).end(JSON.stringify({
+      jsonrpc: "2.0",
+      error: {
+        code: -32000,
+        message: "Method not allowed."
+      },
+      id: null
+    }));
+  });
+
+  app.delete('/mcp', async (req, res) => {
+    console.log('Received DELETE MCP request');
+    res.writeHead(405).end(JSON.stringify({
+      jsonrpc: "2.0",
+      error: {
+        code: -32000,
+        message: "Method not allowed."
+      },
+      id: null
+    }));
+  });
+
+  // Support SSE for baackward compatibility
+  const sseTransports = {};
+
+  // Legacy SSE endpoint for older clients
+  app.get('/sse', async (req, res) => {
+    console.log('/sse Received:', req.body);
+    const server = await getServer();
+    // Create SSE transport for legacy clients
+    const transport = new SSEServerTransport('/messages', res);
+    sseTransports[transport.sessionId] = transport;
+    
+    res.on("close", () => {
+      delete sseTransports[transport.sessionId];
+    });
+    
+    await server.connect(transport);
+  });
+
+  // Legacy message endpoint for older clients
+  app.post('/messages', async (req, res) => {
+    console.log('/messages Received:', req.body);
+    const sessionId = req.query.sessionId;
+    const transport = sseTransports[sessionId];
+    if (transport) {
+      await transport.handlePostMessage(req, res, req.body);
+    } else {
+      res.status(400).send('No transport found for sessionId');
+    }
+  });
+
+  // Start the server
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Cloud Run MCP server listening on port ${PORT}`);
+  });
+}
 
 // Handle server shutdown
 process.on('SIGINT', async () => {
