@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 /*
 Copyright 2025 Google LLC
 
@@ -25,8 +23,16 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { registerTools, registerToolsRemote } from './tools.js';
 import { checkGCP } from './lib/gcp-metadata.js';
+import { registerResources } from './resources.js'; // Importing new resource registration
 
-const gcpInfo = await checkGCP();
+
+
+
+// Execute the credential check immediately at startup.
+// This `await` call will block the server from starting until credentials are confirmed,
+// or the application exits if credentials are missing.
+
+const gcpInfo = await checkGCP(); // This line remains as it checks for GCP environment metadata
 
 /**
  * Ensure that console.log and console.error are compatible with stdio.
@@ -56,11 +62,16 @@ async function getServer () {
   const server = new McpServer({
     name: 'cloud-run',
     version: '1.0.0',
-  }, { capabilities: { logging: {} } });
+  }, { capabilities: { logging: {}, resources: {} } }); //added resources capability
 
-  if (shouldStartStdio() || !(gcpInfo && gcpInfo.project)) {
-    console.log('Using tools optimized for local or stdio mode.');
+  const isRemote = !(gcpInfo && gcpInfo.project); 
+  const currentProject = isRemote ? null : gcpInfo.project; null;
+  const currentRegion = isRemote ? null : gcpInfo.region || 'us-west1'; // Default to us-west1 if region is not available
+
+  if (shouldStartStdio() || !isRemote) {
+    console.log('Using tools optimized for local or stdio mode. along with resources.');
     await registerTools(server);
+    await registerResources(server, isRemote, currentProject, currentRegion);
   } else {
     console.log(`Running on GCP project: ${gcpInfo.project}, region: ${gcpInfo.region}. Using tools optimized for remote use.`);
     await registerToolsRemote(server);
@@ -165,7 +176,7 @@ if (shouldStartStdio()) {
   });
 
   // Start the server
-  const PORT = process.env.PORT || 3000;
+  const PORT = process.env.PORT || 8080;
   app.listen(PORT, () => {
     console.log(`Cloud Run MCP server listening on port ${PORT}`);
   });
