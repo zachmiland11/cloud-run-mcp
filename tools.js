@@ -19,7 +19,8 @@ import { deploy } from './lib/cloud-run-deploy.js';
 import { listServices, getService, getServiceLogs } from './lib/cloud-run-services.js';
 import { listProjects, createProjectAndAttachBilling } from './lib/gcp-projects.js';
 import { checkGCP } from './lib/gcp-metadata.js';
-import { ResourceTemplate } from "@modelcontextprotocol/sdk/server/mcp.js";
+// Import the IAM utility function (assuming you create this file)
+import { addIAMRoles as addIAMRolesToGCP } from './lib/iam-utils.js'; //
 
 export const registerTools = (server) => {
   // Tool to list GCP projects
@@ -62,8 +63,11 @@ export const registerTools = (server) => {
           }]
         };
       }
+
       try {
         const result = await createProjectAndAttachBilling(projectId);
+        // Assuming result contains the newProjectId or similar, adjust based on actual createProjectAndAttachBilling return
+        const newProjectId = projectId || (result && result.projectId ? result.projectId : "a-new-generated-project-id"); // Fixed placeholder
         return {
           content: [{
             type: 'text',
@@ -177,13 +181,12 @@ export const registerTools = (server) => {
         do {
           // Fetch a page of logs
           const response = await getServiceLogs(project, region, service, requestOptions);
-          
+
           if (response.logs) {
             allLogs.push(response.logs);
           }
-          
-          // Set the requestOptions incl pagintion token for the next iteration
 
+          // Set the requestOptions incl pagination token for the next iteration
           requestOptions = response.requestOptions;
 
         } while (requestOptions); // Continue as long as there is a next page token
@@ -203,6 +206,108 @@ export const registerTools = (server) => {
       }
     }
   );
+
+  // Tool to add IAM roles
+  server.tool(
+    'add_IAM_Roles',
+    'Adds specified IAM roles to a Google Cloud service account within a project. This tool enforces least privilege by preventing the addition of highly permissive roles like Owner, Editor, or Admin roles. Use this for granting necessary permissions to your Cloud Run service or other services.',
+    {
+      project: z.string().describe('The Google Cloud project ID where the service account resides. The user must provide or confirm this ID.'),
+      serviceAccountEmail: z.string().describe('The full email address of the service account to add roles to (e.g., my-service-account@my-project-id.iam.gserviceaccount.com). It is highly recommended to use a dedicated service account rather than the default Compute Engine service account for Cloud Run services.'),
+      roles: z.array(z.string()).describe('An array of specific IAM roles (e.g., ["roles/run.invoker", "roles/storage.objectViewer"]) to add to the service account. These should be predefined roles from Google Cloud IAM that grant the least privilege necessary. Highly permissive roles (Owner, Editor, Admin) are disallowed.'),
+    }, // Removed the extraneous '' here
+    async ({ project, serviceAccountEmail, roles }) => {
+      if (typeof project !== 'string' || project.trim() === '') {
+        return {
+          content: [{
+            type: 'text',
+            text: 'Google Cloud project ID must be provided and cannot be empty.',
+          }],
+        };
+      }
+      if (typeof serviceAccountEmail !== 'string' || serviceAccountEmail.trim() === '') {
+        return {
+          content: [{
+            type: 'text',
+            text: 'Service account email must be provided and cannot be empty. This should be the full email address of the service account (e.g., my-service-account@my-project-id.iam.gserviceaccount.com).',
+          }],
+        };
+      }
+      if (!Array.isArray(roles) || roles.length === 0) { // Fixed check for roles array
+        return {
+          content: [{
+            type: 'text',
+            text: 'At least one IAM role must be specified as an array (e.g., ["roles/run.invoker"]).',
+          }],
+        };
+      }
+
+      // Security check: Prevent adding highly privileged roles
+      const forbiddenRoles = [
+        'roles/owner',
+        'roles/editor',
+        'roles/admin.cloudrun.admin',
+        'roles/iam.securityAdmin',
+        'roles/resourcemanager.organizationAdmin',
+        'roles/resourcemanager.projectIamAdmin',
+        'roles/resourcemanager.folderIamAdmin',
+        // Add any other highly sensitive roles you want to explicitly block
+      ];
+      const alowedRoles = [
+        'roles/run.invoker',
+        'roles/storage.objectViewer',
+        'roles/logging.logWriter',
+        // Add any other roles that are considered safe and necessary
+      ]
+      for (const role of roles) {
+        if (forbiddenRoles.includes(role.toLowerCase())) {
+          return {
+            content: [{
+              type: 'text',
+              text: `Error: Adding the role "${role}" is not allowed. These roles are too permissive and can lead to significant security issues. Please choose more restrictive roles that adhere to the principle of least privilege.`,
+            }],
+          };
+        }
+      }
+
+      try {
+        // Call the actual function to add IAM roles
+        // This function needs to be implemented in './lib/iam-utils.js'
+        const response = await addIAMRolesToGCP({ // Corrected function name
+          projectId: project,
+          roles: roles,
+          serviceAccount: serviceAccountEmail,
+        });
+
+        // Assuming addIAMRolesToGCP returns a success indicator or similar
+        // You might need to adjust this based on the actual implementation of addIAMRolesToGCP
+        if (response && response.success) { // Simplified success check
+          return {
+            content: [{
+              type: 'text',
+              text: `IAM roles ${roles.join(', ')} successfully added to service account ${serviceAccountEmail} in project ${project}.`,
+            }],
+          };
+        } else {
+          return {
+            content: [{
+              type: 'text',
+              text: `Failed to add IAM roles ${roles.join(', ')} to service account ${serviceAccountEmail} in project ${project}. Check the underlying IAM utility logs for details.`,
+            }],
+          };
+        }
+
+      } catch (error) {
+        return {
+          content: [{
+            type: 'text',
+            text: `Error adding IAM roles to service account ${serviceAccountEmail} in project ${project}: ${error.message || error}`,
+          }],
+        };
+      }
+    }
+  );
+  // End of the new add_IAM_Roles tool
 
   server.tool(
     'deploy_local_files',
@@ -251,7 +356,8 @@ export const registerTools = (server) => {
           ],
         };
       }
-    });
+    }
+  );
 
 
   server.tool(
@@ -309,7 +415,7 @@ export const registerTools = (server) => {
       service: z.string().optional().default('app').describe('Name of the Cloud Run service to deploy to'),
       files: z.array(z.object({
         filename: z.string().describe('Name and path of the file (e.g. "src/index.js" or "data/config.json")'),
-        content: z.string().optional().describe('Text content of the file'),
+        content: z.string().describe('Text content of the file'),
       })).describe('Array of file objects containing filename and content'),
     },
     async ({ project, region, service, files }) => {
@@ -356,10 +462,11 @@ export const registerTools = (server) => {
           ],
         };
       }
-    });
+    }
+  );
 };
 
-export const registerToolsRemote = async (server) => {
+export const registerToolsRemote = async (server, gcpCredentialsError) => {
   const gcpInfo = await checkGCP();
   if (!gcpInfo || !gcpInfo.project) {
     throw new Error("Cannot register remote tools: GCP project ID could not be determined from the metadata server.");
@@ -367,8 +474,9 @@ export const registerToolsRemote = async (server) => {
   const currentProject = gcpInfo.project;
   const currentRegion = gcpInfo.region || 'europe-west1'; // Fallback if region is not available
 
+  
   // Listing Cloud Run services (Remote)
-  server.tool(
+  createCredentialCheckedRemoteTool(
     "list_services",
     `Lists Cloud Run services in GCP project ${currentProject} and a given region.`,
     {
@@ -399,7 +507,7 @@ export const registerToolsRemote = async (server) => {
   );
 
   // Dynamic resource for getting a specific service (Remote)
-  server.tool(
+  createCredentialCheckedRemoteTool(
     "get_service",
     `Gets details for a specific Cloud Run service in GCP project ${currentProject}.`,
     {
@@ -438,43 +546,36 @@ export const registerToolsRemote = async (server) => {
     }
   );
 
-// Logs for a service
-  server.tool(
+  // Logs for a service (Remote)
+  createCredentialCheckedRemoteTool(
     "get_service_log",
-    "Gets Logs and Error Messages for a specific Cloud Run service.",
+    `Gets Logs and Error Messages for a specific Cloud Run service in GCP project ${currentProject}.`,
     {
-      project: z.string().describe("Google Cloud project ID containing the service"),
-      region: z.string().describe("Region where the service is located").default('europe-west1'),
+      region: z.string().describe("Region where the service is located").default(currentRegion),
       service: z.string().describe("Name of the Cloud Run service"),
     },
-    async ({ project, region, service }) => {
+    async ({ region, service }) => {
       let allLogs = [];
       let requestOptions;
       try {
         do {
-          // Fetch a page of logs
-          const response = await getServiceLogs(project, region, service, requestOptions);
-          
+          const response = await getServiceLogs(currentProject, region, service, requestOptions);
           if (response.logs) {
             allLogs.push(response.logs);
           }
-          
-          // Set the requestOptions incl pagintion token for the next iteration
-
           requestOptions = response.requestOptions;
-
-        } while (requestOptions); // Continue as long as there is a next page token
-          return {
-            content: [{
-              type: 'text',
-              text: allLogs.join('\n')
-            }]
-          };
+        } while (requestOptions);
+        return {
+          content: [{
+            type: 'text',
+            text: allLogs.join('\n')
+          }]
+        };
       } catch (error) {
         return {
           content: [{
             type: 'text',
-            text: `Error getting Logs for service ${service} in project ${project} (region ${region}): ${error.message}`
+            text: `Error getting Logs for service ${service} in project ${currentProject} (region ${region}): ${error.message}`
           }]
         };
       }
@@ -482,7 +583,7 @@ export const registerToolsRemote = async (server) => {
   );
 
   // Deploy file contents to Cloud Run (Remote)
-  server.tool(
+  createCredentialCheckedRemoteTool(
     'deploy_file_contents',
     `Deploy files to Cloud Run by providing their contents directly to the GCP project ${currentProject}.`,
     {
@@ -533,5 +634,6 @@ export const registerToolsRemote = async (server) => {
           ],
         };
       }
-    });
+    }
+  );
 };

@@ -23,7 +23,7 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { registerTools, registerToolsRemote } from './tools.js';
 import { checkGCP } from './lib/gcp-metadata.js';
-import { registerResources } from './resources.js'; // Importing new resource registration
+
 
 
 
@@ -62,18 +62,21 @@ async function getServer () {
   const server = new McpServer({
     name: 'cloud-run',
     version: '1.0.0',
-  }, { capabilities: { logging: {}, resources: {} } }); //added resources capability
+  }, { capabilities: { logging: {}, resources: {
+    "cloudrun.service": {}, // Your target resource
+        "gcp.project": {},
+  } } }); //added resources capability
 
   const isRemote = !(gcpInfo && gcpInfo.project); 
   const currentProject = isRemote ? null : gcpInfo.project; null;
   const currentRegion = isRemote ? null : gcpInfo.region || 'us-west1'; // Default to us-west1 if region is not available
 
   if (shouldStartStdio() || !isRemote) {
-    console.log('Using tools optimized for local or stdio mode. along with resources.');
+    console.log('Using tools optimized for local or stdio mode. tools and resources.');
     await registerTools(server);
     await registerResources(server, isRemote, currentProject, currentRegion);
   } else {
-    console.log(`Running on GCP project: ${gcpInfo.project}, region: ${gcpInfo.region}. Using tools optimized for remote use.`);
+    console.log(`Running on GCP project: ${gcpInfo.project}, region: ${gcpInfo.region}. Using tools optimized for Remote use.`);
     await registerToolsRemote(server);
   }
 
@@ -85,7 +88,7 @@ if (shouldStartStdio()) {
   const stdioTransport = new StdioServerTransport();
   const server = await getServer();
   await server.connect(stdioTransport);
-  console.log('Cloud Run MCP server stdio transport connected');
+  console.log('Cloud Run MCP server stdio transport connected, all new code here');
 } else {
   console.log('Running on GCP, stdio transport will not be started.');
 
